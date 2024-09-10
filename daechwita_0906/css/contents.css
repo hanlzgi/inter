@@ -1,0 +1,704 @@
+@charset "UTF-8";
+
+/* select-01 */
+.select-01 {
+    background: url(../img/content_01/bg.png) no-repeat;
+}
+
+.select-01 .slide {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.71%;
+    top: 15.6%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    height: 30.2%;
+    padding:  2.3rem 1.4rem;
+    /* background: rgba(255, 255, 255, 0.85); */
+    background: linear-gradient(180deg, #20a7ff,#005ed0);
+    border-radius: 2rem;
+    box-shadow: 4px 0 4px rgba(0, 0, 0, 0.8);
+    z-index: 3;
+}
+
+.select-01 .slide .btn-controls {
+    display: block;
+    width: 8.6rem;
+    height: 9.1rem;
+    background-size: 100%;
+    background-repeat: no-repeat;
+    z-index: 1;
+}
+
+.select-01 .slide .slider-wrap {
+    width: calc(90%);
+    height: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.select-01 .slide .slider-wrap.active{
+    pointer-events: all;
+}
+
+.select-01 .slide .slider-wrap .sd {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    transition: left 0.5s ease;
+}
+
+.select-01 .slide .box {
+    flex-shrink: 0;
+    flex-grow: 0;
+    width: calc(24%);
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10%;
+    background-color: #fff7ed;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+.select-01 .slide .box .txt {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 14%;
+    pointer-events:none;
+    z-index: 6;
+}
+
+.select-01 .drop-wrap{
+    position: absolute;
+    bottom: 5%;
+    left: 1%;
+    display: flex;
+    width: calc(100% - 8%);
+    height: 40%;
+}
+
+.select-01 .drop-wrap .dropzon{
+    position: relative;
+    width: 15%;
+    height:100%;
+    z-index: 0;
+    
+}
+
+.select-01 .drop-wrap .dropzon .human{
+    width: 100%;
+    height: 100%;
+    background-image: url(../img/content_01/img_human.png);
+    background-size: 100%;
+    background-repeat: no-repeat;
+}
+
+.select-01 .drop-wrap .dropzon.ui-droppable-hover{
+    filter: grayscale(1);
+}
+
+.select-01 .drop-wrap .dropzon .success{
+    position: absolute;
+    opacity: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.select-01 .drop-wrap .dropzon .success img{
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    object-fit: contain;
+}
+
+.select-01 .slide .box.disabled{
+    pointer-events: none;
+    border: 5px dashed #909090;
+    /* background-image: url(../img/content_01/bg_img_off.png); */
+}
+
+.select-01 .slide .box.disabled .draggable{
+    filter: grayscale(1);
+}
+.select-01 .slide .box .draggable{
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 80%;
+    z-index: 5;
+}
+
+.select-01 .slide .box .draggable:hover{
+    transform: scale(1.1);
+}
+
+div[data-name="daegeum"]{
+    background-image: url(../img/content_01/musical_01.png);
+}
+
+div[data-name="haegeum"]{
+    background-image: url(../img/content_01/musical_02.png);
+}
+
+div[data-name="sogo"]{
+    background-image: url(../img/content_01/musical_03.png);
+}
+
+div[data-name="kkwaeng"]{
+    background-image: url(../img/content_01/musical_04.png);
+}
+
+div[data-name="jabara"]{
+    background-image: url(../img/content_01/musical_05.png);
+}
+
+div[data-name="taepyeongso"]{
+    background-image: url(../img/content_01/musical_06.png);
+}
+
+div[data-name="nabal"]{
+    background-image: url(../img/content_01/musical_07.png);
+}
+
+div[data-name="jing"]{
+    background-image: url(../img/content_01/musical_08.png);
+}
+
+div[data-name="nagak"]{
+    background-image: url(../img/content_01/musical_09.png);
+}
+
+div[data-name="dragon"]{
+    background-image: url(../img/content_01/musical_10.png);
+}
+
+
+.select-01 .drop-wrap .dropzon.jabara .human{
+    background-image: url(../img/content_01/musical_05_active.png);
+}
+
+.select-01 .drop-wrap .dropzon.taepyeongso .human{
+    background-image: url(../img/content_01/musical_06_active.png);
+}
+
+.select-01 .drop-wrap .dropzon.nabal .human {
+    background-image: url(../img/content_01/musical_07_active.png);
+}
+
+.select-01 .drop-wrap .dropzon.jing .human {
+    background-image: url(../img/content_01/musical_08_active.png);
+}
+
+.select-01 .drop-wrap .dropzon.nagak .human {
+    background-image: url(../img/content_01/musical_09_active.png);
+}
+
+.select-01 .drop-wrap .dropzon.dragon .human {
+    background-image: url(../img/content_01/musical_10_active.png);
+}
+
+/* .select-01 .drop-wrap .dropzon.jabara .success::before{
+    background-image: url(../img/content_01/musical_05.png);
+}
+
+.select-01 .drop-wrap .dropzon.taepyeongso .success::before{
+    background-image: url(../img/content_01/musical_06.png);
+}
+
+.select-01 .drop-wrap .dropzon.nabal .success::before{
+    background-image: url(../img/content_01/musical_07.png);
+}
+
+.select-01 .drop-wrap .dropzon.jing .success::before{
+    background-image: url(../img/content_01/musical_08.png);
+}
+
+.select-01 .drop-wrap .dropzon.nagak .success::before{
+    background-image: url(../img/content_01/musical_09.png);
+}
+
+.select-01 .drop-wrap .dropzon.dragon .success::before{
+    background-image: url(../img/content_01/musical_10.png);
+} */
+.select-01 .drop-wrap .dropzon .success::before{
+    content: '';
+    position: absolute;
+    display: block;
+    width: 23.8rem;
+    height: 18.5rem;
+}
+
+.select-01 .drop-wrap .dropzon.active .success{
+    pointer-events: none;
+    animation: success 2s ease-out 1 forwards;
+}
+
+/* .select-01 .drop-wrap .dropzon.active .human{
+    animation: human 2s ease-out 1 forwards;
+} */
+
+
+@keyframes human {
+    0% {
+      opacity: 0;
+    }
+    70%{
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+  }
+
+
+@keyframes success {
+    0% {
+      opacity: 1;
+    }
+    70%{
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+  }
+
+/* select-02 */
+.select-02 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url(../img/content_02/bg.png);
+    padding-top:10%;
+}
+
+.select-02.complete .clothes{
+    display: none;
+}
+
+.select-02.complete .character .txt-wrap{
+    display: none;
+}
+
+.select-02 .clothes{
+    /* position: absolute; */
+    width: 42.9%;
+    height: 87.4%;
+    margin-left: 5%;
+    /* right: 1%;
+    bottom: 4%; */
+    padding: 9% 0 0 0;
+    display: flex;
+    justify-content: center;
+    background-image: url(../img/content_02/bg_wardrobe.png);
+    background-size: contain;
+}
+
+.select-02 .clothes .clothes-wrap{
+    display: flex;
+    justify-content: space-between;
+    width: 49%;
+   
+}
+
+.select-02 .clothes .clothes-wrap > div{
+    width: 48%;
+}
+
+.select-02 .clothes .box {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    background-color: #e2e2ca;
+    border: 4px solid #76a18e;
+    border-radius: 1.2rem;
+}
+
+
+.select-02 .clothes .box + .box {
+    margin-top: 4%;
+}
+
+.select-02 .clothes .cl_draggable{
+    width: 80%;
+    height: 100%;
+    z-index: 6;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100%;
+}
+
+.select-02 .clothes .box .txt{
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 0rem;
+    pointer-events:none;
+    z-index: 7;
+    width: 60%;
+}
+
+.select-02 .clothes .box .txt img{
+    object-fit: contain;
+    width: 100%;
+    pointer-events: none;
+}
+
+.select-02 .clothes .box.gugunbog {
+    height: 43.3%;;
+}
+
+.select-02 .clothes .box.deungchae {
+    height: 18.9%; /* 원래 11.8rem */
+}
+
+.select-02 .clothes .box.heughye {
+    height: 19.4%; /* 원래 12.1rem */
+}
+
+.select-02 .clothes .box.jeonlib {
+    height: 24.1%; /* 원래 15rem */
+}
+
+.select-02 .clothes .box.hwang {
+    height: 27.8%; /* 원래 17.3rem */
+}
+
+.select-02 .clothes .box.jeondae {
+    height: 14.3%; /* 원래 8.9rem */
+}
+
+.select-02 .clothes .box.mituli {
+    height: 14.9%; /* 원래 9.3rem */
+}
+
+.select-02 .clothes .box.gugunbog .cl_draggable{
+    background-image: url("../img/content_02/gugunbog.png");
+}
+
+.select-02 .clothes .box.deungchae .cl_draggable{
+    background-image: url("../img/content_02/deungchae.png");
+}
+
+.select-02 .clothes .box.heughye .cl_draggable{
+    background-image: url("../img/content_02/heughye.png");
+}
+
+.select-02 .clothes .box.jeonlib .cl_draggable{
+    background-image: url("../img/content_02/jeonlib.png");
+}
+
+.select-02 .clothes .box.hwang .cl_draggable{
+    background-image: url("../img/content_02/hwang.png");
+}
+
+.select-02 .clothes .box.jeondae .cl_draggable{
+    background-image: url("../img/content_02/jeondae.png");
+}
+
+.select-02 .clothes .box.mituli .cl_draggable{
+    background-image: url("../img/content_02/mituli.png");
+}
+
+
+.select-02 .character .character-wrap{
+    /* position: absolute;
+    left: 6.12%;
+    bottom: 4.35%; */
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.select-02 .character .txt-wrap{
+    position: absolute;
+    top: 13.06%;
+    left: 11.63%;
+    width: 32.5%;
+    height: 12.8%;
+    display: flex;
+    justify-content: center;
+}
+
+.select-02 .character .txt-box{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.75);
+    border-radius: 1.5rem;
+    box-shadow: 0.4rem 0 0.4rem rgba(0, 0, 0, 0.8);
+}
+.select-02 .character .txt-box img{
+    width: 80%;
+    object-fit: contain;
+}
+
+
+.select-02 .character .girl{
+    width: 34.9rem;
+    height: 60.7rem;
+}
+.select-02 .character .ch{
+    width: 100%;
+    height: 100%;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+.select-02 .character .ch-girl{
+    background-image: url(../img/content_02/girl.png);
+}
+
+.select-02 .girl.gugunbog .ch-girl{
+    background-image: url(../img/content_02/girl_head.png);
+}
+
+.select-02 .character .boy{
+    width: 35.1rem;
+    height: 62.1rem;
+}
+
+.select-02 .character .ch-boy{
+    background-image: url(../img/content_02/boy.png);
+}
+
+.select-02 .boy.jeonlib .ch-boy{
+    background-image: url(../img/content_02/boy_haed.png);
+}
+
+.select-02 .character .clothes-drop {
+    position: relative;
+}
+
+.select-02 .character .clothes-drop .cl{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+}
+
+.select-02 .character .clothes-drop .cl img{
+    display: none;
+    object-fit: contain;
+    width: 100%;
+}
+
+.select-02 .character .girl .cl_01{
+    z-index: 5;
+}
+
+.select-02 .character .girl .cl_02{
+    z-index: 6;
+}
+
+.select-02 .character .girl .cl_03{
+    z-index: 7;
+}
+.select-02 .character .girl.gugunbog .cl_01 img,
+.select-02 .character .girl.deungchae .cl_02 img,
+.select-02 .character .girl.heughye .cl_03 img{
+    display: block;
+}
+
+.select-02 .character .cl img{
+    object-fit: contain;
+}
+.select-02 .character .boy .cl_01{
+    z-index: 4;
+}
+
+.select-02 .character .boy .cl_02{
+    z-index: 3;
+}
+
+.select-02 .character .boy .cl_03{
+    z-index: 4;
+}
+
+.select-02 .character .boy .cl_04{
+    z-index: 5;
+}
+
+.select-02 .character .boy.jeonlib .cl_01 img,
+.select-02 .character .boy.hwang .cl_02 img,
+.select-02 .character .boy.jeondae .cl_03 img,
+.select-02 .character .boy.mituli .cl_04 img{
+    display: block;
+}
+
+.select-02 .clothes-wrap .box.disabled{
+    pointer-events: none;
+    border-style: dashed;
+    background-color: transparent;
+}
+
+.select-02 .clothes-wrap .box.disabled .cl_draggable{
+    filter: grayscale(1);
+}
+
+.cl_effect{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: url(../img/content_02/effect.png);
+    background-repeat: no-repeat;
+    opacity:0;
+    background-size: 100%;
+}
+
+.cl_effect[data-name="hwang"]{
+    background-position-y: 68%;
+}
+
+.cl_effect[data-name="jeondae"]{
+    background-position-y: 78%;
+}
+
+.cl_effect[data-name="mituli"]{
+    background-position-y: 115%;
+}
+
+.cl_effect[data-name="deungchae"]{
+    background-position-y: 78%;
+    background-size: 50%;
+}
+
+.cl_effect[data-name="heughye"]{
+    background-position-y: 115%;
+}
+
+
+
+.cl-active{
+    animation: cleffect 2s ease-out;
+    animation-iteration-count:infinite;
+}
+
+@keyframes cleffect {
+    0% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+
+@media screen and (max-width: 1450px) {
+    .select-02 .character .girl{
+        width: 23.27rem;
+        height: 40.47rem;
+    }
+
+    .select-02 .character .boy{
+        width: 23.4rem;
+        height: 41.4rem;
+    }
+
+    .select-02{
+        align-items: flex-end;
+        padding-bottom: 2%;
+    }
+    .select-02 .clothes .cl_draggable{
+        width: 80%;
+        background-size: 100%;
+    }
+    .select-02 .clothes{
+        width: 40%;
+        height: 85.4%;
+    }
+}
+@media screen and (max-width: 1280px) {
+    .select-01 .slide .btn-controls {
+        width: 4.3rem;
+        height: 4.51rem;
+    }
+
+    .select-01 .slide{
+        padding:1rem;
+    }
+    .select-01 .slide .box .txt img{
+        width: 100%;
+        object-fit: contain;
+    }
+    .select-02 .clothes .cl_draggable{
+
+        background-size: contain;
+    }
+
+    .select-02 .clothes .box{
+        border-radius: 0.6rem;
+        border-width: 2px;
+    }
+}
+
+@media screen and (max-width: 1060px) {
+    .select-02 .character .girl{
+        width: 15.51rem;
+        height: 26.98rem;
+    }
+
+    .select-02 .character .boy{
+        width: 15.6rem;
+        height: 27.6rem;
+    }
+    .select-02 .character .txt-wrap{
+        top: 25%;
+    }
+    .select-02 .character .txt-box{
+        border-radius: 0.7rem;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .select-01 .slide .btn-controls {
+        width: 2.15rem;
+        height: 2.26rem;
+    }
+
+    .select-01 .slide {
+        border-radius: 1rem;
+    }
+
+    
+    .select-02 .character .girl{
+        width: 10.34rem;
+        height: 17.99rem;
+    }
+
+    .select-02 .character .boy{
+        width: 10.4rem;
+        height: 18.4rem;
+    }
+}
+
+@media screen and (max-width: 475px) {
+    .select-02 .character .girl{
+        width: 6.89rem;
+        height:11.99rem;
+    }
+
+    .select-02 .character .boy{
+        width: 6.93rem;
+        height: 12.27rem;
+    }
+}

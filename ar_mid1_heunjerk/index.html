@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR_GPS</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <style>
+        html{
+            height: -webkit-fill-available;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            width: 100vw;
+            overflow: hidden;
+        }
+        .ctaDiv {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background: #fffa;
+            z-index: 99;
+        }
+    </style>
+  </head>
+  <body class="dark">
+    
+    <div id="startARDiv" class="ctaDiv">
+      <p style="text-align: center; width:60vw;">AR 콘텐츠를 체험하려면<br>장치의 카메라 기능을 사용하도록 허락해주세요.</p>
+      <button id="startARButton" onclick="StartAR()" >장치 사용</button>
+  </div>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas"></canvas>
+    </div>
+    <div id="loading-cover" style="display:none;">
+      <div id="unity-loading-bar">
+        <!-- <div id="unity-logo"><img src="logo.png"></div> -->
+        <div id="unity-progress-bar-empty" style="display: none;">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+        <div class="spinner"></div>
+      </div>
+    </div>
+    <div id="unity-fullscreen-button" style="display: none;"></div>
+    <script>
+      var myGameInstance = null;
+      const hideFullScreenButton = "1";
+      const buildUrl = "Build";
+      const loaderUrl = buildUrl + "/ar_mid1_heunjerk.loader.js";
+      const config = {
+        dataUrl: buildUrl + "/ar_mid1_heunjerk.data.unityweb",
+        frameworkUrl: buildUrl + "/ar_mid1_heunjerk.framework.js.unityweb",
+        codeUrl: buildUrl + "/ar_mid1_heunjerk.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "AR_GPS",
+        productVersion: "0.1",
+      };
+      const container = document.querySelector("#unity-container");
+      const canvas = document.querySelector("#unity-canvas");
+      const loadingCover = document.querySelector("#loading-cover");
+      const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
+      const progressBarFull = document.querySelector("#unity-progress-bar-full");
+      const fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      const spinner = document.querySelector('.spinner');
+      const canFullscreen = (function() {
+        for (const key of [
+            'exitFullscreen',
+            'webkitExitFullscreen',
+            'webkitCancelFullScreen',
+            'mozCancelFullScreen',
+            'msExitFullscreen',
+          ]) {
+          if (key in document) {
+            return true;
+          }
+        }
+        return false;
+      }());
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        container.className = "unity-mobile";
+        //config.devicePixelRatio = 1;
+      }
+      loadingCover.style.display = "none";
+      function StartAR() {
+      const script = document.createElement("script");
+      script.src = loaderUrl;
+      document.getElementById("startARDiv").style.display = "none";
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          spinner.style.display = "none";
+          progressBarEmpty.style.display = "";
+          progressBarFull.style.width = `${100 * progress}%`;
+        }).then((unityInstance) => {
+          myGameInstance = unityInstance;
+          loadingCover.style.display = "none";
+          fullscreenButton.style.display = "";
+          if (canFullscreen) {
+            if (!hideFullScreenButton) {
+              fullscreenButton.style.display = "";
+            }navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+              console.log('카메라에 접근 권한을 허용했습니다.');
+              enterFullscreenAndRotate();
+            })
+            .catch(function(err) {
+              myGameInstance.SendMessage("PCMode_Obj", "DisableARCam");
+              console.error('카메라에 접근 권한을 거부하였거나 에러가 발생하였습니다: ' + err.name);
+            });
+            fullscreenButton.onclick = () => {
+              //unityInstance.SetFullscreen(1);
+              enterFullscreenAndRotate();
+            };
+          }
+        }).catch((message) => {
+          alert(message);
+        });
+      };
+      document.body.appendChild(script);
+    }
+      function getGeolocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                var latitude = position.coords.latitude;
+                var longitude = position.coords.longitude;
+                enterFullscreenAndRotate();
+                // Unity로 위도와 경도를 전달
+                myGameInstance.SendMessage("LocationManager", "HandleLocation", latitude + "," + longitude);
+                });
+            } else {
+             console.log("Geolocation is not available in this browser.");
+            }
+        }
+    //자이로스코프 지원 확인
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                // 자이로스코프 이벤트 리스너 등록
+                window.addEventListener('deviceorientation', handleOrientation);
+                } else {
+                console.error('자이로스코프 사용 권한이 거부되었습니다.');
+                }
+            })
+            .catch(console.error);
+    } else {
+        //console.error('자이로스코프를 지원하지 않는 브라우저입니다.');        
+        if ('AbsoluteOrientationSensor' in window) {
+            const sensor = new AbsoluteOrientationSensor();
+            sensor.onreading = () => {
+                const compassData = document.getElementById('compassData');
+                
+                // 쿼터니언 데이터 가져오기
+                const quaternion = sensor.quaternion;
+                
+                
+                // 쿼터니언을 오일러 각도로 변환
+                const euler = quaternionToEuler(quaternion);
+                
+                // 오일러 각도를 라디안에서 도로 변환
+                const toDegrees = (radians) => (radians * 180) / Math.PI;
+                const x = toDegrees(euler[0]);
+                const y = toDegrees(euler[1]);
+                const z = toDegrees(euler[2]);
+                // 북쪽을 기준으로 0도로 변환
+                //const northBasedHeading = (360 - z + 180) % 360;
+                const m_x = (360 - x + 180) % 360;
+                const m_y = (360 - y + 180) % 360;
+                const m_z = (360 - z + 180) % 360;
+                //compassData.textContent = `방향: ${northBasedHeading.toFixed(2)}도`;
+                //compassData.textContent = `x: ${x.toFixed(2)},y: ${y.toFixed(2)},z: ${z.toFixed(2)}`;
+                myGameInstance.SendMessage("LocationManager", "HandleOrientation", m_x + "," + m_y + "," + m_z);
+            };
+            sensor.start();
+        } else {
+            alert('브라우저가 나침반 API를 지원하지 않습니다.');
+        }
+    }
+      function enterFullscreenAndRotate() {
+        const elem = canvas;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().then(() => {
+            if (screen.orientation.lock) {
+              screen.orientation.lock('landscape').catch(err => {
+                console.error('Error locking screen orientation:', err);
+              });
+            }
+          }).catch(err => {
+            console.error('Error entering fullscreen:', err);
+          });
+        } else {
+          console.error('Fullscreen API is not supported');
+        }
+      }
+          // 자이로스코프 데이터 처리
+    function handleOrientation(event) {
+    var alpha = event.alpha; // 디바이스의 방위각(0~360도)
+    if(event.webkitCompassHeading)
+    {
+        alpha = event.webkitCompassHeading;
+    }
+    var beta = event.beta;   // 디바이스의 전후 기울임(-180~180도)
+    var gamma = event.gamma; // 디바이스의 좌우 기울임(-90~90도)
+    // 이제 alpha, beta, gamma 값을 사용하여 필요한 작업을 수행할 수 있습니다.
+    //console.log(alpha + "," + beta + "," + gamma)
+    
+    const northBasedHeading = (360 - alpha -90) % 360;
+    
+    myGameInstance.SendMessage("LocationManager", "HandleOrientation", -northBasedHeading + "," + beta + "," + gamma);
+    }
+    function quaternionToEuler(q) {
+        const pitch = Math.asin(2 * (q[0] * q[2] - q[3] * q[1]));
+        const roll = Math.atan2(2 * (q[2] * q[3] + q[0] * q[1]), 1 - 2 * (q[1] * q[1] + q[2] * q[2]));
+        const yaw = Math.atan2(2 * (q[1] * q[2] + q[0] * q[3]), 1 - 2 * (q[2] * q[2] + q[3] * q[3]));
+        
+        return [yaw, pitch, roll];
+    }
+    
+    </script>
+  </body>
+</html>

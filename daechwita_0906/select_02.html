@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>대취타</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='css/import.css'>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+    <script src='js/pages.js'></script>
+</head>
+<body>
+    <main>
+        <div class="wrap">
+            <div class="container">
+                <a href="#" onclick="window.history.back()" class="btn-top btn-back btn-effect">
+                    <span class="sr-only">뒤로가기</span>
+                </a>
+
+                <a href="index.html" class="btn-top btn-home btn-effect">
+                    <span class="sr-only">홈으로</span>
+                </a>
+                <div class="select-02 bg">
+                    <div class="character">
+                        <div class="txt-wrap">
+                            <div class="txt-box"></div>
+                        </div>
+                        <div class="character-wrap">
+                            <div class="girl clothes-drop" data-target="1">
+                                <div class="ch-girl ch"></div>
+                                <div class="cl cl_01">
+                                    <div class="cl_effect" data-name="gugunbog"></div>
+                                    <img src="img/content_02/lg_gugunbog.png" />
+                                </div>
+
+                                <div class="cl cl_02">
+                                    <div class="cl_effect" data-name="deungchae"></div>
+                                    <img src="img/content_02/lg_deungchae.png" />
+                                </div>
+
+                                <div class="cl cl_03">
+                                    <div class="cl_effect" data-name="heughye"></div>
+                                    <img src="img/content_02/lg_heughye.png" />
+                                </div>
+                            </div>
+                            <div class="boy clothes-drop" data-target="2">
+                                <div class="ch-boy ch"></div>
+                                <div class="cl cl_01">
+                                    <div class="cl_effect" data-name="jeonlib"></div>
+                                    <img src="img/content_02/lg_jeonlib.png" />
+                                </div>
+
+                                <div class="cl cl_02">
+                                    <div class="cl_effect" data-name="hwang"></div>
+                                    <img src="img/content_02/lg_hwang.png" />
+                                </div>
+
+                                <div class="cl cl_03">
+                                    <div class="cl_effect" data-name="jeondae"></div>
+                                    <img src="img/content_02/lg_jeondae.png" />
+                                </div>
+
+                                <div class="cl cl_04">
+                                    <div class="cl_effect" data-name="mituli"></div>
+                                    <img src="img/content_02/lg_mituli.png" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="clothes">
+                        <div class="clothes-wrap">
+                            <div class="left">
+                                <div class="box gugunbog">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="gugunbog" data-target="1" alt="구군복"></div>
+                                    <!-- <img src="img/content_02/gugunbog.png" class="cl_draggable btn-effect btn-hover" data-name="gugunbog" data-target="1" alt="구군복"> -->
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_gugunbog.png"/>
+                                        <span class="sr-only">구군복</span>
+                                    </div>
+                                </div>
+
+                                <div class="box deungchae">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="deungchae" data-target="1" alt="등채"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_deungchae.png"/>
+                                        <span class="sr-only">등채</span>
+                                    </div>
+                                </div>
+
+                                <div class="box heughye">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="heughye" data-target="1" alt="흑혜"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_heughye.png"/>
+                                        <span class="sr-only">흑혜</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="right">
+                                <div class="box jeonlib">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="jeonlib" data-target="2" alt="전립"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_jeonlib.png"/>
+                                        <span class="sr-only">전립</span>
+                                    </div>
+                                </div>
+
+                                <div class="box hwang">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="hwang" data-target="2" alt="황철릭"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_hwang.png"/>
+                                        <span class="sr-only">황철릭</span>
+                                    </div>
+                                </div>
+
+                                <div class="box jeondae">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="jeondae" data-target="2" alt="전대"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_jeondae.png"/>
+                                        <span class="sr-only">전대</span>
+                                    </div>
+                                </div>
+
+                                <div class="box mituli">
+                                    <div class="cl_draggable btn-effect btn-hover" data-name="mituli" data-target="2" alt="미투리"></div>
+                                    <div class="txt">
+                                        <img src="img/content_02/txt_mituli.png"/>
+                                        <span class="sr-only">미투리</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="finish">
+                <div class="finish-wrap">
+                    <div class="flex-box">
+                        <div class="img">
+                            <div class="txt">
+                                <div class="finish-animation"></div>
+                                <img src="img/bg/bg_finish.png" />
+                            </div>
+                            <div class="score">
+                                <div class="star bounce"><div class="finish-animation"></div></div>
+                                <div class="star big bounce"><div class="finish-animation"></div></div>
+                                <div class="star bounce"><div class="finish-animation"></div></div>
+                            </div>
+                        </div>
+                        <div class="btn-wrap">
+                            <a href="javascript:void(0)" class="btn-more2 btn-effect">
+                                <span class="sr-only">더 알아보기</span>
+                            </a>
+                            <a href="main.html" class="btn-effect">
+                                <span class="sr-only">나가기</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dialog">
+                <div class="container">
+                    <div class="flex-box">
+                        <div class="img">
+                            <div class="dialog-slide">
+                                <a href="javascript:void(0)" class="btn-controls prev btn-effect btn-hover">
+                                    <span class="sr-only">이전</span>
+                                </a>
+                                <div class="sd">
+                                    <div class="img_01 active">
+                                        <img src="img/content_02/dialog_01.png" />
+                                    </div>
+                                    <div class="img_02">
+                                        <img src="img/content_02/dialog_02.png" />
+                                    </div>
+                                </div>
+                                <a href="javascript:void(0)" class="btn-controls next btn-effect btn-hover">
+                                    <span class="sr-only">다음</span>
+                                </a>
+                            </div>
+                            <a href="javascript:void(0)">
+                                <img src="img/icon/ico_dialog_close.png" class="dialog-close btn-effect btn-hover" title="팝업 닫기"/>
+                                <span class="sr-only">팝업 닫기</span>
+                            </a>
+                        </div>
+                        <div class="img-char girl">
+                            <img src="img/content_02/dialog_char.png" title="팝업 캐릭터"/>
+                            <span class="sr-only">팝업 캐릭터</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <audio id="bgm02" src="sound/bgm/select_02_start.mp3"></audio>
+    <audio id="active" src="sound/bgm/active_bgm.mp3" loop></audio>
+    <audio id="effect" src="sound/effect/active_effect.mp3"></audio>
+</body>
+</html>
