@@ -1,8 +1,12 @@
 @charset "utf-8";
 /* ==========================================================================
    engine.css — 구조와 동작. 콘텐츠가 바뀌어도 이 파일은 바뀌지 않는다.
-   호환 방침: CSS 변수 / aspect-ratio / grid / clamp 미사용.
-             flex + 퍼센트 + JS 레터박스 계산으로 처리.
+
+   호환 방침 : CSS 변수 / aspect-ratio / grid / clamp / gap 미사용.
+               퍼센트 + rem + JS 레터박스 계산으로 처리한다.
+   좌표 방침 : 모든 위치는 무대(16:9) 기준 % — 시안의 판넬을 그대로 비례 환산.
+               1rem = 무대 짧은 변의 1% (engine.js 의 fitStage() 가 잡는다).
+   아이콘     : 전부 CSS 도형. 웹폰트·아이콘폰트·이미지에 의존하지 않는다.
    ========================================================================== */
 
 * { -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; }
@@ -17,7 +21,7 @@ html, body {
 
 #app {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: #000;
+  background: #0e0b18;
 }
 
 /* 16:9 레터박스. 크기는 js/engine.js 의 fitStage() 가 계산해 넣는다. */
@@ -37,7 +41,7 @@ html, body {
 .layer-bg     { z-index: 1; }
 .layer-stage  { z-index: 2; }
 .layer-frame  { z-index: 3; pointer-events: none; }
-.layer-dim    { z-index: 4; pointer-events: none; background: #14102a; opacity: 0; }
+.layer-dim    { z-index: 4; pointer-events: none; background: #1b1435; opacity: 0; }
 .layer-ui     { z-index: 5; pointer-events: none; }
 
 .layer-bg img { display: block; width: 100%; height: 100%; }
@@ -54,7 +58,7 @@ html, body {
   position: absolute;
   overflow: hidden;
   background: #000;
-  border-radius: .8rem;
+  border-radius: 1rem;
 }
 #screen video,
 #screen-poster {
@@ -63,7 +67,8 @@ html, body {
   object-fit: cover; font-family: "object-fit:cover";
   background: #000;
 }
-#screen-poster { z-index: 2; opacity: 0; }
+/* 포스터는 장식이므로 클릭을 절대 가로채지 않는다(투명해도 이벤트는 먹는다) */
+#screen-poster { z-index: 2; opacity: 0; pointer-events: none; }
 #screen-poster.on { opacity: 1; }
 
 /* 자동재생 차단 시 뜨는 탭 버튼 */
@@ -85,28 +90,218 @@ html, body {
 }
 .tap-text { display: block; font-size: 2rem; letter-spacing: .1em; }
 
-/* ---------------------------------------------------------------- 타이틀 */
-.node-title {
+/* ======================================================= 재생 컨트롤바 */
+/* 영상 무대 안쪽 하단에 겹친다. 자동재생 차단 오버레이(z-index 4)보다 위에
+   두어 차단된 상태에서도 재생 버튼을 누를 수 있게 한다.
+   아이콘은 전부 CSS 도형 — 웹폰트/SVG/이미지 없이 그린다. */
+.vctrl {
+  position: absolute; z-index: 5; left: 0; right: 0; bottom: 0;
+  padding: 3.6rem 2rem 1.6rem;
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.vctrl.on { opacity: 1; visibility: visible; pointer-events: auto; }
+
+/* ---- 진행바 ---- */
+.vbar {
+  position: relative; display: block;
+  height: 1.8rem; margin: 0 0 1rem;
+  cursor: pointer;
+}
+.vbar-track, .vbar-fill {
+  position: absolute; top: .65rem; left: 0;
+  height: .5rem; border-radius: 999px;
+}
+.vbar-track { right: 0; }
+.vbar-fill  { width: 0; }
+.vbar-knob {
+  position: absolute; top: .1rem; left: 0;
+  width: 1.6rem; height: 1.6rem; margin-left: -.8rem;
+  border-radius: 50%;
+  opacity: 0;
+}
+.vbar:hover .vbar-knob,
+.vbar:focus .vbar-knob,
+.vbar.dragging .vbar-knob { opacity: 1; }
+.vbar:focus { outline: .25rem solid #ffd76a; outline-offset: .2rem; }
+
+/* ---- 버튼 줄 ---- */
+.vrow { position: relative; white-space: nowrap; font-size: 0; }
+
+.vbtn {
+  display: inline-block; vertical-align: middle;
+  margin: 0 .6rem 0 0; padding: 0 1.7rem;
+  height: 4rem;
+  border: 0; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-size: 1.7rem; font-weight: 700; line-height: 4rem;
+  white-space: nowrap;
+}
+.vbtn-icon { position: relative; width: 4rem; padding: 0; }
+
+/* 재생 / 일시정지 */
+.vi {
+  position: absolute; top: 50%; left: 50%;
+  width: 0; height: 0;
+  margin: -.95rem 0 0 -.55rem;
+  border-top: .95rem solid transparent;
+  border-bottom: .95rem solid transparent;
+  border-left: 1.5rem solid #fff;
+}
+.vbtn-icon.playing .vi {                 /* box-shadow 로 두 번째 줄을 만든다 */
+  width: .55rem; height: 1.9rem;
+  margin: -.95rem 0 0 -.78rem;
+  border: 0; background: #fff;
+  -webkit-box-shadow: 1rem 0 0 #fff;
+          box-shadow: 1rem 0 0 #fff;
+}
+
+.vtime {
+  display: inline-block; vertical-align: middle;
+  margin: 0 1rem;
+  font-size: 1.6rem; line-height: 4rem;
+}
+
+/* 우측 묶음 : 배속 · 음량 · 전체화면 */
+.vright { position: absolute; right: 0; top: 0; white-space: nowrap; }
+.vspeed, .vvol { display: inline-block; vertical-align: middle; }
+.vspeed .vbtn { margin: 0 0 0 .6rem; }
+.vrate { min-width: 5.4rem; padding: 0 1.2rem; text-align: center; }
+
+/* ---- 음량 ---- */
+.vvol { margin: 0 0 0 1.4rem; }
+.vbtn-vol { margin: 0; }
+
+/* 스피커 : 몸통(:before) + 콘(:after) + 음파(i) + 음소거 사선(b) */
+.ic-vol {
+  position: absolute; top: 50%; left: 50%;
+  width: 2.4rem; height: 1.9rem;
+  margin: -.95rem 0 0 -1.2rem;
+}
+.ic-vol:before {                         /* 스피커 몸통 */
+  content: ""; position: absolute; left: 0; top: .55rem;
+  width: .6rem; height: .8rem; background: #fff;
+}
+.ic-vol:after {                          /* 스피커 콘 */
+  content: ""; position: absolute; left: .5rem; top: 0;
+  width: 0; height: 0;
+  border-top: .95rem solid transparent;
+  border-bottom: .95rem solid transparent;
+  border-right: .8rem solid #fff;
+}
+.ic-vol i { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.ic-vol i:before, .ic-vol i:after {      /* 음파 두 줄 (원호) */
+  content: ""; position: absolute;
+  border: .22rem solid transparent; border-right-color: #fff;
+  border-radius: 50%;
+}
+.ic-vol i:before { right: .62rem; top: .5rem; width: .3rem; height: .5rem; }
+.ic-vol i:after  { right: 0;      top: .1rem; width: .6rem; height: 1.3rem; }
+.ic-vol b { display: none; }
+
+/* 음소거 : 음파를 지우고 사선을 긋는다 */
+.vbtn-vol.muted .ic-vol i { display: none; }
+.vbtn-vol.muted .ic-vol b {
+  display: block; position: absolute;
+  left: .1rem; top: .85rem; width: 2.4rem; height: .26rem;
+  background: #fff;
+  -webkit-transform: rotate(-40deg);
+      -ms-transform: rotate(-40deg);
+          transform: rotate(-40deg);
+}
+
+.vvolbar {
+  position: relative; display: inline-block; vertical-align: middle;
+  width: 10rem; height: 1.8rem; margin: 0 0 0 .5rem;
+  cursor: pointer;
+}
+.vvol-track, .vvol-fill {
+  position: absolute; top: .65rem; left: 0;
+  height: .5rem; border-radius: 999px;
+}
+.vvol-track { right: 0; }
+.vvol-fill  { width: 100%; }
+.vvol-knob {
+  position: absolute; top: .1rem; left: 100%;
+  width: 1.6rem; height: 1.6rem; margin-left: -.8rem;
+  border-radius: 50%;
+  opacity: 0;
+}
+.vvolbar:hover .vvol-knob,
+.vvolbar:focus .vvol-knob,
+.vvolbar.dragging .vvol-knob { opacity: 1; }
+.vvolbar:focus { outline: .25rem solid #ffd76a; outline-offset: .2rem; }
+
+/* ---- 전체화면 : 네 모서리 브래킷 (자식 <i> 로 의사요소를 2개 더 쓴다) ---- */
+.ic-fs {
+  position: absolute; top: 50%; left: 50%;
+  width: 2.1rem; height: 1.9rem;
+  margin: -.95rem 0 0 -1.05rem;
+}
+.ic-fs:before, .ic-fs:after,
+.ic-fs i:before, .ic-fs i:after {
+  content: ""; position: absolute;
+  width: .68rem; height: .6rem;
+  border: 0 solid #fff;
+}
+.ic-fs i { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.ic-fs:before   { left: 0;  top: 0;     border-top-width: .24rem;    border-left-width: .24rem; }
+.ic-fs:after    { right: 0; bottom: 0;  border-bottom-width: .24rem; border-right-width: .24rem; }
+.ic-fs i:before { right: 0; top: 0;     border-top-width: .24rem;    border-right-width: .24rem; }
+.ic-fs i:after  { left: 0;  bottom: 0;  border-bottom-width: .24rem; border-left-width: .24rem; }
+
+/* 크롬(무대 우상단) 버튼은 툴바보다 크므로 아이콘도 키운다 */
+.chrome .ic-fs { width: 3.6rem; height: 3.2rem; margin: -1.6rem 0 0 -1.8rem; }
+.chrome .ic-fs:before, .chrome .ic-fs:after,
+.chrome .ic-fs i:before, .chrome .ic-fs i:after { width: 1.15rem; height: 1rem; }
+.chrome .ic-fs:before   { border-top-width: .36rem;    border-left-width: .36rem; }
+.chrome .ic-fs:after    { border-bottom-width: .36rem; border-right-width: .36rem; }
+.chrome .ic-fs i:before { border-top-width: .36rem;    border-right-width: .36rem; }
+.chrome .ic-fs i:after  { border-bottom-width: .36rem; border-left-width: .36rem; }
+
+/* =========================================================== 머리글 */
+/* 시안 기준 : 좌측 12.9%, 아래쪽 정렬. 배지가 없으면 제목만 같은 자리에 남는다. */
+.node-head {
   position: absolute;
-  top: 6.4%; left: 50%;
-  max-width: 82%;
-  margin: 0;
-  padding: 1.05rem 3.2rem;
-  font-size: 2.5rem; font-weight: 700; line-height: 1.35;
+  left: 12.9%; right: 27%;
+  top: 4%; height: 14.4%;
+}
+.node-head-in { position: absolute; left: 0; right: 0; bottom: 0; }
+
+.node-badge {
+  display: none;
+  margin: 0 0 .5rem;
+  padding: 0 1.5rem;
+  height: 5.4rem;
+  font-size: 3.4rem; font-weight: 700; line-height: 5.4rem;
   white-space: nowrap;
   opacity: 0;
-  -webkit-transform: translate(-50%, .8rem);
-      -ms-transform: translate(-50%, .8rem);
-          transform: translate(-50%, .8rem);
+}
+.node-badge.has { display: inline-block; }
+.node-badge.on  { opacity: 1; }
+
+.node-title {
+  margin: 0;
+  font-size: 5.2rem; font-weight: 700; line-height: 1.22;
+  text-align: left;
+  opacity: 0;
+  -webkit-transform: translateY(.8rem);
+      -ms-transform: translateY(.8rem);
+          transform: translateY(.8rem);
 }
 .node-title.on {
   opacity: 1;
-  -webkit-transform: translate(-50%, 0);
-      -ms-transform: translate(-50%, 0);
-          transform: translate(-50%, 0);
+  -webkit-transform: translateY(0);
+      -ms-transform: translateY(0);
+          transform: translateY(0);
 }
 
 /* ----------------------------------------------------------- 공통 크롬 */
+/* UI 레이어 내부 순서. 선택 허브(.choice)가 전면을 덮으므로 크롬을 그 위에 올린다.
+   (z-index 없이는 DOM 순서상 .choice 가 크롬 버튼을 가려 홈/건너뛰기가 눌리지 않는다) */
+.chrome    { z-index: 3; }
+.actions   { z-index: 3; }
+.hero-play { z-index: 2; }
+.choice    { z-index: 1; }
+
 .chrome { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
 .chrome .btn {
@@ -114,29 +309,46 @@ html, body {
   display: -webkit-box; display: -ms-flexbox; display: flex;
   -webkit-box-align: center; -ms-flex-align: center; align-items: center;
   -webkit-box-pack: center; -ms-flex-pack: center; justify-content: center;
-  padding: 0 1.6rem;
+  padding: 0 1.4rem;
   border: 0; cursor: pointer;
-  font-family: inherit; font-size: 1.55rem; font-weight: 700; line-height: 1;
+  font-family: inherit; font-size: 3.4rem; font-weight: 700; line-height: 1;
   white-space: nowrap;
 }
-.chrome .btn-home {
-  padding: 0;
-  font-size: 2.2rem;
+.chrome .btn-icon { padding: 0; }
+
+/* 집 아이콘 : 지붕(:before) + 몸통(:after) */
+.ic-home {
+  position: absolute; top: 50%; left: 50%;
+  width: 4.6rem; height: 4.3rem;
+  margin: -2.15rem 0 0 -2.3rem;
+}
+.ic-home:before {                        /* 지붕 : 처마를 조금만 내어 화살표로 안 보이게 */
+  content: ""; position: absolute; left: 0; top: 0;
+  width: 0; height: 0;
+  border-left: 2.3rem solid transparent;
+  border-right: 2.3rem solid transparent;
+  border-bottom: 1.7rem solid #fff;
+}
+.ic-home:after {                         /* 몸통 */
+  content: ""; position: absolute; left: .45rem; top: 1.6rem;
+  width: 3.7rem; height: 2.7rem;
+  background: #fff;
+  border-radius: 0 0 .4rem .4rem;
 }
 
 /* ---------------------------------------------------------- 액션 버튼 */
 .actions {
   position: absolute;
-  left: 0; right: 0; bottom: 4.2%;
+  left: 0; right: 0; bottom: 2.4%;
   text-align: center;
   font-size: 0;
 }
 .actions .btn {
   display: inline-block;
   margin: 0 .8rem;
-  padding: 1.35rem 3.4rem;
+  padding: 1.2rem 3.2rem;
   border: 0; cursor: pointer;
-  font-family: inherit; font-size: 1.9rem; font-weight: 700; line-height: 1;
+  font-family: inherit; font-size: 2.2rem; font-weight: 700; line-height: 1;
 }
 
 /* -------------------------------------------------------------- 선택 허브 */
@@ -148,7 +360,7 @@ html, body {
 
 .choice-panel {
   position: absolute; top: 0; left: 0; bottom: 0;
-  width: 75%;
+  width: 74%;
   opacity: 0;
   -webkit-transform: translateX(-50%);
       -ms-transform: translateX(-50%);
@@ -164,7 +376,7 @@ html, body {
 .choice-inner {
   position: absolute; top: 50%; left: 0;
   width: 100%;
-  padding: 0 8% 0 14%;
+  padding: 0 12.3% 0 23%;
   text-align: center;
   -webkit-transform: translateY(-50%);
       -ms-transform: translateY(-50%);
@@ -172,28 +384,46 @@ html, body {
 }
 
 .choice-mark {
-  width: 5.6rem; height: 5.6rem; margin: 0 auto 2.2rem;
+  width: 10rem; height: 10rem; margin: 0 auto 2.6rem;
   border-radius: 50%;
-  font-size: 3.2rem; font-weight: 700; line-height: 5.6rem;
+  font-size: 5.6rem; font-weight: 700; line-height: 10rem;
 }
 .choice-question {
-  margin: 0 0 3.2rem;
-  font-size: 2.9rem; font-weight: 700; line-height: 1.4;
+  margin: 0 0 7rem;
+  font-size: 7rem; font-weight: 700; line-height: 1.3;
 }
 .choice-list { margin: 0; padding: 0; list-style: none; }
-.choice-list li { margin: 0 0 1.5rem; }
+.choice-list li { margin: 0 0 3.3rem; }
+.choice-list li:last-child { margin-bottom: 0; }
 .choice-list .btn {
+  position: relative;
   display: block; width: 100%;
-  padding: 1.5rem 2.4rem;
+  min-height: 7.7rem;
+  padding: 1.6rem 8rem;
   border: 0; cursor: pointer;
-  font-family: inherit; font-size: 1.8rem; line-height: 1.3;
+  font-family: inherit; font-size: 3.3rem; line-height: 1.35;
   text-align: center;
+}
+/* 오른쪽 → 화살표 (화살대 + 화살촉) */
+.choice-list .btn:before {
+  content: ""; position: absolute;
+  right: 3rem; top: 50%;
+  width: 2.4rem; height: .3rem; margin-top: -.15rem;
+}
+.choice-list .btn:after {
+  content: ""; position: absolute;
+  right: 3rem; top: 50%;
+  width: 1.7rem; height: 1.7rem; margin-top: -.85rem;
+  border-top: .3rem solid; border-right: .3rem solid;
+  -webkit-transform: rotate(45deg);
+      -ms-transform: rotate(45deg);
+          transform: rotate(45deg);
 }
 
 /* ------------------------------------------------------ 진입 재생 버튼 */
 .hero-play {
   position: absolute; top: 50%; left: 50%;
-  width: 12rem; height: 12rem;
+  width: 14rem; height: 14rem;
   margin: 0; padding: 0; border: 0; cursor: pointer;
   background: transparent;
   display: none;
@@ -202,21 +432,23 @@ html, body {
           transform: translate(-50%, -50%);
 }
 .hero-play.on { display: block; }
-.hero-play:focus { outline: .3rem solid #ffd76a; outline-offset: 1rem; }
+.hero-play:focus { outline: .3rem solid #7d67c8; outline-offset: 1rem; }
 .hero-triangle {
   display: block; margin: 0 auto;
   width: 0; height: 0;
-  border-top: 4.4rem solid transparent;
-  border-bottom: 4.4rem solid transparent;
-  border-left: 7.2rem solid #fff;
-  -webkit-filter: drop-shadow(0 .6rem 1.6rem rgba(0,0,0,.45));
-          filter: drop-shadow(0 .6rem 1.6rem rgba(0,0,0,.45));
+  border-top: 5rem solid transparent;
+  border-bottom: 5rem solid transparent;
+  border-left: 8.2rem solid #fff;
+  -webkit-filter: drop-shadow(0 .6rem 1.6rem rgba(40, 28, 74, .4));
+          filter: drop-shadow(0 .6rem 1.6rem rgba(40, 28, 74, .4));
 }
 .hero-play:hover .hero-triangle { opacity: .82; }
 
 /* ------------------------------------------------------------- 로딩 표시 */
 .loading {
-  position: absolute; z-index: 6; left: 50%; bottom: 6%;
+  position: absolute; z-index: 6; left: 50%; bottom: 11.5%;
+  /* 하단 액션 버튼과 겹쳐 클릭을 가로채지 않도록 반드시 통과시킨다 */
+  pointer-events: none;
   opacity: 0;
   -webkit-transform: translateX(-50%);
       -ms-transform: translateX(-50%);
@@ -234,11 +466,45 @@ html, body {
 @-webkit-keyframes blink { 0%,100% { opacity:.25 } 50% { opacity:1 } }
 @keyframes blink { 0%,100% { opacity:.25 } 50% { opacity:1 } }
 
+/* =============================================== 전체화면 (벤더별 분리) */
+/* 접두사가 다른 의사클래스를 콤마로 묶으면 규칙 전체가 무효가 되므로 반드시 따로 쓴다.
+   #screen 은 engine.js 가 인라인 style 로 위치를 넣으므로 !important 가 필요하다. */
+#screen:fullscreen {
+  position: fixed !important;
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
+  border-radius: 0;
+}
+#screen:-webkit-full-screen {
+  position: fixed !important;
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
+  border-radius: 0;
+}
+#screen:-moz-full-screen {
+  position: fixed !important;
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
+  border-radius: 0;
+}
+#screen:-ms-fullscreen {
+  position: fixed !important;
+  left: 0 !important; top: 0 !important;
+  width: 100% !important; height: 100% !important;
+  border-radius: 0;
+}
+/* 전체화면 요소의 기본 검정 배경 */
+:fullscreen         { background: #000; }
+:-webkit-full-screen { background: #000; }
+:-moz-full-screen   { background: #000; }
+:-ms-fullscreen     { background: #000; }
+
 /* --------------------------------------------------------------- 전환 */
 /* 트랜지션은 한 곳에 모아 둔다. 값 변경은 여기서. */
 .layer-dim,
 #screen-poster,
 .node-title,
+.node-badge,
 .choice-panel,
 .loading {
   -webkit-transition: opacity .34s ease, -webkit-transform .34s ease;
@@ -252,10 +518,19 @@ html, body {
   -webkit-transition: background-color .18s ease;
           transition: background-color .18s ease;
 }
+.vctrl {
+  -webkit-transition: opacity .2s ease;
+          transition: opacity .2s ease;
+}
+.vbar-knob, .vvol-knob {
+  -webkit-transition: opacity .15s ease;
+          transition: opacity .15s ease;
+}
 
 /* 모션 최소화 설정 존중 */
 @media (prefers-reduced-motion: reduce) {
-  .layer-dim, #screen-poster, .node-title, .choice-panel, .loading, .btn {
+  .layer-dim, #screen-poster, .node-title, .node-badge, .choice-panel,
+  .loading, .btn, .vctrl, .vbar-knob, .vvol-knob {
     -webkit-transition: none !important;
             transition: none !important;
   }
@@ -265,7 +540,10 @@ html, body {
 @media (max-width: 640px) {
   .choice-panel { width: 100%; }
   .choice-inner { padding: 0 7%; }
-  .node-title { white-space: normal; font-size: 2.9rem; }
+  .node-head    { right: 14%; }
+  .vtime        { display: none; }
+  .vvolbar      { display: none; }
+  #v-replay     { display: none; }
 }
 
 /* ------------------------------------------------------------- 디버그 */
