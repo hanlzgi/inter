@@ -1,0 +1,279 @@
+@charset "utf-8";
+/* ==========================================================================
+   engine.css — 구조와 동작. 콘텐츠가 바뀌어도 이 파일은 바뀌지 않는다.
+   호환 방침: CSS 변수 / aspect-ratio / grid / clamp 미사용.
+             flex + 퍼센트 + JS 레터박스 계산으로 처리.
+   ========================================================================== */
+
+* { -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000;
+}
+
+/* 16:9 레터박스. 크기는 js/engine.js 의 fitStage() 가 계산해 넣는다. */
+#stage {
+  position: absolute;
+  top: 50%; left: 50%;
+  margin: 0;
+  overflow: hidden;
+  -webkit-transform: translate(-50%, -50%);
+      -ms-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+}
+
+/* --------------------------------------------------------------- 레이어 */
+.layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+.layer-bg     { z-index: 1; }
+.layer-stage  { z-index: 2; }
+.layer-frame  { z-index: 3; pointer-events: none; }
+.layer-dim    { z-index: 4; pointer-events: none; background: #14102a; opacity: 0; }
+.layer-ui     { z-index: 5; pointer-events: none; }
+
+.layer-bg img { display: block; width: 100%; height: 100%; }
+.layer-bg img { object-fit: cover; font-family: "object-fit:cover"; }
+
+/* UI 레이어는 통과시키고, 실제 조작 요소만 되살린다 (원본의 advClick="0" 재현) */
+.layer-ui button,
+.layer-ui a,
+.layer-ui .choice[data-open="1"] { pointer-events: auto; }
+
+/* ------------------------------------------------------------ 영상 무대 */
+/* 위치·크기는 scenario.stage.video 의 % 값을 engine.js 가 주입한다 */
+#screen {
+  position: absolute;
+  overflow: hidden;
+  background: #000;
+  border-radius: .8rem;
+}
+#screen video,
+#screen-poster {
+  position: absolute; top: 0; left: 0;
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; font-family: "object-fit:cover";
+  background: #000;
+}
+#screen-poster { z-index: 2; opacity: 0; }
+#screen-poster.on { opacity: 1; }
+
+/* 자동재생 차단 시 뜨는 탭 버튼 */
+.tap-to-play {
+  position: absolute; top: 0; left: 0; z-index: 4;
+  width: 100%; height: 100%;
+  display: none;
+  border: 0; padding: 0; margin: 0; cursor: pointer;
+  background: rgba(0, 0, 0, .5);
+  color: #fff; font: inherit;
+}
+.tap-to-play.on { display: block; }
+.tap-icon {
+  display: block; margin: 0 auto .8rem;
+  width: 0; height: 0;
+  border-top: 2.2rem solid transparent;
+  border-bottom: 2.2rem solid transparent;
+  border-left: 3.6rem solid #fff;
+}
+.tap-text { display: block; font-size: 2rem; letter-spacing: .1em; }
+
+/* ---------------------------------------------------------------- 타이틀 */
+.node-title {
+  position: absolute;
+  top: 6.4%; left: 50%;
+  max-width: 82%;
+  margin: 0;
+  padding: 1.05rem 3.2rem;
+  font-size: 2.5rem; font-weight: 700; line-height: 1.35;
+  white-space: nowrap;
+  opacity: 0;
+  -webkit-transform: translate(-50%, .8rem);
+      -ms-transform: translate(-50%, .8rem);
+          transform: translate(-50%, .8rem);
+}
+.node-title.on {
+  opacity: 1;
+  -webkit-transform: translate(-50%, 0);
+      -ms-transform: translate(-50%, 0);
+          transform: translate(-50%, 0);
+}
+
+/* ----------------------------------------------------------- 공통 크롬 */
+.chrome { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+.chrome .btn {
+  position: absolute;
+  display: -webkit-box; display: -ms-flexbox; display: flex;
+  -webkit-box-align: center; -ms-flex-align: center; align-items: center;
+  -webkit-box-pack: center; -ms-flex-pack: center; justify-content: center;
+  padding: 0 1.6rem;
+  border: 0; cursor: pointer;
+  font-family: inherit; font-size: 1.55rem; font-weight: 700; line-height: 1;
+  white-space: nowrap;
+}
+.chrome .btn-home {
+  padding: 0;
+  font-size: 2.2rem;
+}
+
+/* ---------------------------------------------------------- 액션 버튼 */
+.actions {
+  position: absolute;
+  left: 0; right: 0; bottom: 4.2%;
+  text-align: center;
+  font-size: 0;
+}
+.actions .btn {
+  display: inline-block;
+  margin: 0 .8rem;
+  padding: 1.35rem 3.4rem;
+  border: 0; cursor: pointer;
+  font-family: inherit; font-size: 1.9rem; font-weight: 700; line-height: 1;
+}
+
+/* -------------------------------------------------------------- 선택 허브 */
+.choice {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  visibility: hidden;
+}
+.choice[data-open="1"] { visibility: visible; }
+
+.choice-panel {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 75%;
+  opacity: 0;
+  -webkit-transform: translateX(-50%);
+      -ms-transform: translateX(-50%);
+          transform: translateX(-50%);
+}
+.choice[data-open="1"] .choice-panel {
+  opacity: 1;
+  -webkit-transform: translateX(0);
+      -ms-transform: translateX(0);
+          transform: translateX(0);
+}
+
+.choice-inner {
+  position: absolute; top: 50%; left: 0;
+  width: 100%;
+  padding: 0 8% 0 14%;
+  text-align: center;
+  -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+          transform: translateY(-50%);
+}
+
+.choice-mark {
+  width: 5.6rem; height: 5.6rem; margin: 0 auto 2.2rem;
+  border-radius: 50%;
+  font-size: 3.2rem; font-weight: 700; line-height: 5.6rem;
+}
+.choice-question {
+  margin: 0 0 3.2rem;
+  font-size: 2.9rem; font-weight: 700; line-height: 1.4;
+}
+.choice-list { margin: 0; padding: 0; list-style: none; }
+.choice-list li { margin: 0 0 1.5rem; }
+.choice-list .btn {
+  display: block; width: 100%;
+  padding: 1.5rem 2.4rem;
+  border: 0; cursor: pointer;
+  font-family: inherit; font-size: 1.8rem; line-height: 1.3;
+  text-align: center;
+}
+
+/* ------------------------------------------------------ 진입 재생 버튼 */
+.hero-play {
+  position: absolute; top: 50%; left: 50%;
+  width: 12rem; height: 12rem;
+  margin: 0; padding: 0; border: 0; cursor: pointer;
+  background: transparent;
+  display: none;
+  -webkit-transform: translate(-50%, -50%);
+      -ms-transform: translate(-50%, -50%);
+          transform: translate(-50%, -50%);
+}
+.hero-play.on { display: block; }
+.hero-play:focus { outline: .3rem solid #ffd76a; outline-offset: 1rem; }
+.hero-triangle {
+  display: block; margin: 0 auto;
+  width: 0; height: 0;
+  border-top: 4.4rem solid transparent;
+  border-bottom: 4.4rem solid transparent;
+  border-left: 7.2rem solid #fff;
+  -webkit-filter: drop-shadow(0 .6rem 1.6rem rgba(0,0,0,.45));
+          filter: drop-shadow(0 .6rem 1.6rem rgba(0,0,0,.45));
+}
+.hero-play:hover .hero-triangle { opacity: .82; }
+
+/* ------------------------------------------------------------- 로딩 표시 */
+.loading {
+  position: absolute; z-index: 6; left: 50%; bottom: 6%;
+  opacity: 0;
+  -webkit-transform: translateX(-50%);
+      -ms-transform: translateX(-50%);
+          transform: translateX(-50%);
+}
+.loading.on { opacity: 1; }
+.loading span {
+  display: inline-block; width: 1rem; height: 1rem; margin: 0 .4rem;
+  border-radius: 50%; background: #fff; opacity: .35;
+  -webkit-animation: blink 1.05s infinite;
+          animation: blink 1.05s infinite;
+}
+.loading span:nth-child(2) { -webkit-animation-delay: .18s; animation-delay: .18s; }
+.loading span:nth-child(3) { -webkit-animation-delay: .36s; animation-delay: .36s; }
+@-webkit-keyframes blink { 0%,100% { opacity:.25 } 50% { opacity:1 } }
+@keyframes blink { 0%,100% { opacity:.25 } 50% { opacity:1 } }
+
+/* --------------------------------------------------------------- 전환 */
+/* 트랜지션은 한 곳에 모아 둔다. 값 변경은 여기서. */
+.layer-dim,
+#screen-poster,
+.node-title,
+.choice-panel,
+.loading {
+  -webkit-transition: opacity .34s ease, -webkit-transform .34s ease;
+          transition: opacity .34s ease, transform .34s ease;
+}
+.choice-panel {
+  -webkit-transition: opacity .3s ease .2s, -webkit-transform .3s ease .2s;
+          transition: opacity .3s ease .2s, transform .3s ease .2s;
+}
+.btn {
+  -webkit-transition: background-color .18s ease;
+          transition: background-color .18s ease;
+}
+
+/* 모션 최소화 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  .layer-dim, #screen-poster, .node-title, .choice-panel, .loading, .btn {
+    -webkit-transition: none !important;
+            transition: none !important;
+  }
+}
+
+/* --------------------------------------------------------- 좁은 화면 보정 */
+@media (max-width: 640px) {
+  .choice-panel { width: 100%; }
+  .choice-inner { padding: 0 7%; }
+  .node-title { white-space: normal; font-size: 2.9rem; }
+}
+
+/* ------------------------------------------------------------- 디버그 */
+.debug {
+  position: fixed; z-index: 99; right: 0; bottom: 0;
+  max-width: 46vw;
+  padding: 8px 10px;
+  background: rgba(0,0,0,.8); color: #9ef;
+  font: 12px/1.6 monospace;
+}
+.debug a { color: #ffd76a; margin-right: 8px; text-decoration: none; }
