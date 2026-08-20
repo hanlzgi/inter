@@ -5,23 +5,22 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no">
-<title>대한민국 임시 정부 인터랙티브</title>
+<title>인터랙티브 영상</title>
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/engine.css">
 </head>
 <body>
 
-<div id="app">
+<div id="app" class="mode-menu">
   <div id="stage">
 
-    <!-- z1 : 배경 (배경 이미지를 쓰지 않으면 theme.css 의 #stage 그라데이션이 보인다) -->
+    <!-- z1 : 배경 (theme.css 의 #stage 그라데이션) -->
     <div class="layer layer-bg"><img id="bg-img" alt=""></div>
 
     <!-- z2 : 영상 무대 -->
     <div class="layer layer-stage">
       <div id="screen">
         <video id="video" playsinline webkit-playsinline preload="auto"></video>
-        <img id="screen-poster" alt="">
         <button type="button" id="tap-to-play" class="tap-to-play">
           <span class="tap-icon"></span><span class="tap-text">재생</span>
         </button>
@@ -84,6 +83,16 @@
     <!-- z5 : UI -->
     <div class="layer layer-ui">
 
+      <!-- 통합 메뉴 : 어떤 편을 볼지 고르는 화면 -->
+      <div id="menu" class="menu" aria-hidden="true">
+        <div class="menu-head">
+          <h1 id="menu-title" class="menu-title"></h1>
+          <p id="menu-sub" class="menu-sub"></p>
+        </div>
+        <ul id="menu-list" class="menu-list"></ul>
+        <p id="menu-hint" class="menu-hint"></p>
+      </div>
+
       <!-- 머리글 : 배지 + 제목. 아래쪽 정렬이라 배지가 없으면 제목만 같은 자리에 남는다 -->
       <div class="node-head">
         <div class="node-head-in">
@@ -107,11 +116,6 @@
         </div>
       </div>
 
-      <!-- 진입 재생 버튼 -->
-      <button type="button" id="hero-play" class="hero-play" aria-label="영상 재생">
-        <span class="hero-triangle"></span>
-      </button>
-
     </div>
 
     <div id="loading" class="loading" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -123,8 +127,18 @@
 
 <div id="debug" class="debug" hidden></div>
 
-<!-- 콘텐츠 패키지 : 이 파일만 교체하면 다른 편이 된다 -->
+<!-- ==========================================================================
+     콘텐츠 등록
+     메뉴 구성표 → 각 편의 시나리오 → 엔진 순서로 읽는다.
+     편을 추가하려면 content/<id>/scenario.js 를 만들고 아래에 한 줄 넣으면 된다.
+     (없는 파일을 적어 두면 404 가 나므로, 만들기 전에는 주석으로 둔다)
+     ========================================================================== -->
+<script src="content/menu.js"></script>
 <script src="content/c1/scenario.js"></script>
+<!-- <script src="content/c2/scenario.js"></script> -->
+<!-- <script src="content/c3/scenario.js"></script> -->
+<!-- <script src="content/c4/scenario.js"></script> -->
+
 <!-- 엔진 : 콘텐츠를 모른다 -->
 <script src="js/engine.js"></script>
 </body>

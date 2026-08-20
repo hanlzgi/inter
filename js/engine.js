@@ -1,16 +1,24 @@
 /* ==========================================================================
- * engine.js — 인터랙티브 영상 노드 플레이어
+ * engine.js — 인터랙티브 영상 플레이어 (통합 메뉴 + 노드 그래프)
  *
  * 설계 방침
- *  1) 콘텐츠 비의존 : 이 파일은 콘텐츠를 모른다. window.SCENARIO 만 읽는다.
+ *  1) 콘텐츠 비의존 : 이 파일은 콘텐츠를 모른다.
+ *                    window.MENU(구성표) 와 window.SCENARIOS(편별 데이터)만 읽는다.
  *  2) 버퍼 노드 없음 : 정지 이미지 중계 슬라이드를 두지 않는다.
  *  3) 영상 종료 감지 없음 : 'ended' 로 화면을 바꾸지 않는다.
  *                          1회 재생 후 마지막 프레임에서 정지(브라우저 기본).
  *                          재진입 시 currentTime = 0 으로 되돌린 뒤 재생.
  *                          (ended 는 재생 버튼 아이콘 복귀에만 쓴다)
- *  4) 호환 우선 : ES5 문법만. fetch / Promise / 화살표함수 / 템플릿리터럴 /
+ *  4) 포스터 이미지 없음 : 별도 포스터 이미지를 두지 않는다.
+ *                          메뉴 썸네일도 영상의 첫 컷을 그대로 쓴다.
+ *  5) 호환 우선 : ES5 문법만. fetch / Promise / 화살표함수 / 템플릿리터럴 /
  *                ES모듈 미사용. file:// 로 열어도 그대로 동작.
  *                전체화면 API 는 벤더 접두사를 모두 훑는다.
+ *
+ * 주소 규칙
+ *      #/           통합 메뉴
+ *      #/c1         c1 편의 시작 노드
+ *      #/c1/hub     c1 편의 hub 노드
  * ========================================================================== */
 (function () {
   'use strict';
@@ -39,7 +47,7 @@
       .replace(/^\s+|\s+$/g, '');
   }
 
-  function empty(el) { while (el.firstChild) { el.removeChild(el.firstChild); } }
+  function empty(el) { while (el && el.firstChild) { el.removeChild(el.firstChild); } }
 
   function setText(el, str) { empty(el); el.appendChild(document.createTextNode(str)); }
 
@@ -57,7 +65,6 @@
     bg:       $('bg-img'),
     screen:   $('screen'),
     video:    $('video'),
-    poster:   $('screen-poster'),
     tap:      $('tap-to-play'),
     dim:      $('dim'),
     badge:    $('node-badge'),
@@ -67,11 +74,15 @@
     choice:   $('choice'),
     question: $('choice-question'),
     list:     $('choice-list'),
-    hero:     $('hero-play'),
     loading:  $('loading'),
     narr:     $('aud-narr'),
     sfx:      $('aud-sfx'),
     debug:    $('debug'),
+    menu:     $('menu'),
+    menuTitle:$('menu-title'),
+    menuSub:  $('menu-sub'),
+    menuList: $('menu-list'),
+    menuHint: $('menu-hint'),
     vctrl:    $('vctrl'),
     vbar:     $('vbar'),
     vfill:    $('vbar-fill'),
@@ -89,16 +100,21 @@
 
   /* ------------------------------------------------------------ 상태 */
 
-  var S = window.SCENARIO;
+  var ALL = window.SCENARIOS || {};   // 편 id → 시나리오
+  var M   = window.MENU || {};        // 메뉴 구성표
+
+  var S = null;             // 현재 편의 시나리오 (메뉴에서는 null)
+  var cid = null;           // 현재 편 id
   var base = '';            // 콘텐츠 에셋 기준 경로
   var current = null;       // 현재 노드 id
   var ratio = 16 / 9;
-  var timers = [];          // 노드 전환 시 정리할 setTimeout 핸들
-  var rate = 1;             // 배속 : 노드를 옮겨도 유지된다
-  var vol = 1;              // 음량 0~1 : 노드를 옮겨도 유지된다
+  var timers = [];          // 화면 전환 시 정리할 setTimeout 핸들
+  var rate = 1;             // 배속 : 편이 바뀌어도 유지된다
+  var vol = 1;              // 음량 0~1 : 편이 바뀌어도 유지된다
   var muted = false;
   var ctrlTimer = null;     // 터치로 띄운 컨트롤바 자동 숨김 핸들
   var sliders = [];         // 드래그 상태를 물어볼 슬라이더들
+  var menuCards = [];       // 메뉴에서 숫자키로 고를 수 있는 카드들
 
   /* --------------------------------------------------- 레터박스 계산 */
   /* aspect-ratio / vh 계산에 기대지 않고 JS로 직접 맞춘다(호환 우선). */
@@ -157,15 +173,6 @@
   function playVideo(node) {
     var v = dom.video;
 
-    // 포스터를 먼저 덮어 첫 프레임 깜빡임을 가린다 (poster 를 쓰지 않으면 생략)
-    if (isStr(node.poster)) {
-      dom.poster.src = base + node.poster;
-      addClass(dom.poster, 'on');
-    } else {
-      dom.poster.removeAttribute('src');
-      removeClass(dom.poster, 'on');
-    }
-
     addClass(dom.loading, 'on');
 
     v.loop = false;
@@ -174,7 +181,7 @@
 
     try { v.currentTime = 0; } catch (e) {}   // 재진입 시 0프레임부터
     try { v.load(); } catch (e) {}
-    applyAudioState(!!node.muted);            // 배속·음량·음소거 유지
+    applyAudioState(!!node.muted);            // 음량·음소거 유지
     try { v.playbackRate = rate; } catch (e) {}
 
     resetCtrl();
@@ -191,9 +198,7 @@
     }
   }
 
-  // 재생이 실제로 시작된 순간에만 포스터를 걷는다 (종료 감지가 아님)
   on(dom.video, 'playing', function () {
-    removeClass(dom.poster, 'on');
     removeClass(dom.loading, 'on');
     removeClass(dom.tap, 'on');
     updateToggle();
@@ -293,7 +298,7 @@
   }
 
   function isVideoNode() {
-    var n = (current && S.nodes) ? S.nodes[current] : null;
+    var n = (S && current && S.nodes) ? S.nodes[current] : null;
     return !!(n && n.type === 'video');
   }
 
@@ -629,9 +634,10 @@
 
   /* -------------------------------------------- 공통 크롬(홈/건너뛰기/전체화면) */
 
-  function renderChrome() {
+  function renderChrome(items) {
     empty(dom.chrome);
-    var items = S.chrome || [], i;
+    items = items || [];
+    var i;
     for (i = 0; i < items.length; i++) {
       (function (item) {
         var b = document.createElement('button');
@@ -656,7 +662,8 @@
 
         on(b, 'click', function (e) {
           if (e && e.preventDefault) { e.preventDefault(); }
-          if (item.action === 'fullscreen') { toggleFS(dom.app); }
+          if (item.action === 'fullscreen')  { toggleFS(dom.app); }
+          else if (item.action === 'menu')   { goMenu(); }
           else if (item.go) { go(item.go); }
         });
 
@@ -666,9 +673,163 @@
     updateFsBtn();
   }
 
+  /* 메뉴 화면에서 쓰는 크롬 : 전체화면 버튼만 (돌아갈 곳이 없으므로 홈은 뺀다) */
+  var MENU_CHROME = [
+    { icon: 'fullscreen', title: '화면 전체 보기',
+      action: 'fullscreen', x: 94.0, y: 5.4, w: 3.6, h: 6.4 }
+  ];
+
+  /* ========================================================== 통합 메뉴 */
+
+  /* 편의 시작 노드가 영상이면 그 영상을 썸네일로 쓴다(첫 컷이 곧 표지). */
+  function thumbSrcOf(sc) {
+    if (!sc) { return null; }
+    if (sc.menu && isStr(sc.menu.thumb)) { return (sc.base || '') + sc.menu.thumb; }
+    var n = sc.nodes ? sc.nodes[sc.start] : null;
+    if (n && n.type === 'video' && isStr(n.src)) { return (sc.base || '') + n.src; }
+    return null;
+  }
+
+  function makeThumb(src) {
+    var box = document.createElement('span');
+    box.className = 'menu-thumb';
+    if (!src) { return box; }
+
+    var v = document.createElement('video');
+    v.className = 'menu-thumb-v';
+    v.setAttribute('preload', 'metadata');
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.muted = true;
+    v.loop = true;
+
+    // 0프레임은 검은 화면인 경우가 많아 살짝 뒤로 옮겨 첫 컷을 잡는다
+    on(v, 'loadedmetadata', function () {
+      try { if (v.currentTime < 0.1) { v.currentTime = 0.1; } } catch (e) {}
+    });
+    on(v, 'error', function () { addClass(box, 'no-thumb'); });
+
+    v.src = src;
+    box.appendChild(v);
+    return box;
+  }
+
+  function makeMenuCard(id, info, ready) {
+    var card, thumbSrc = ready ? thumbSrcOf(ALL[id]) : null;
+
+    if (ready) {
+      card = document.createElement('a');
+      card.className = 'menu-card';
+      card.href = '#/' + id;
+    } else {
+      card = document.createElement('span');
+      card.className = 'menu-card is-off';
+      card.setAttribute('aria-disabled', 'true');
+    }
+
+    card.appendChild(makeThumb(thumbSrc));
+
+    var body = document.createElement('span');
+    body.className = 'menu-body';
+
+    var badge = document.createElement('span');
+    badge.className = 'menu-badge';
+    badge.appendChild(document.createTextNode(info.badge || ''));
+    body.appendChild(badge);
+
+    if (!ready) {
+      var off = document.createElement('span');
+      off.className = 'menu-off';
+      off.appendChild(document.createTextNode(M.notReady || '준비 중'));
+      body.appendChild(off);
+    }
+
+    var label = document.createElement('span');
+    label.className = 'menu-label';
+    label.appendChild(document.createTextNode(info.label || ''));
+    body.appendChild(label);
+
+    if (isStr(info.desc)) {
+      var desc = document.createElement('span');
+      desc.className = 'menu-desc';
+      desc.appendChild(document.createTextNode(info.desc));
+      body.appendChild(desc);
+    }
+
+    card.appendChild(body);
+
+    // 마우스를 올리면 썸네일이 살짝 움직인다(미리보기).
+    // 부담스러우면 아래 두 줄만 지우면 정지 화면으로 돌아간다.
+    if (ready && thumbSrc) {
+      var vv = card.getElementsByTagName('video')[0];
+      on(card, 'mouseover', function () { try { var p = vv.play(); if (p && p['catch']) { p['catch'](function () {}); } } catch (e) {} });
+      on(card, 'mouseout',  function () { try { vv.pause(); vv.currentTime = 0.1; } catch (e) {} });
+    }
+
+    return card;
+  }
+
+  function renderMenu() {
+    setText(dom.menuTitle, M.title || '');
+    setText(dom.menuSub,   M.subtitle || '');
+    setText(dom.menuHint,  M.hint || '');
+
+    empty(dom.menuList);
+    menuCards = [];
+
+    var order = M.order || [], i, id, sc, fb, info, ready, li;
+    for (i = 0; i < order.length; i++) {
+      id    = order[i];
+      sc    = ALL[id];
+      ready = !!(sc && sc.nodes);
+      fb    = (M.fallback && M.fallback[id]) || {};
+      info  = {
+        badge: (ready && sc.menu && sc.menu.badge) || fb.badge || '',
+        label: (ready && sc.menu && sc.menu.label) || fb.label || id,
+        desc:  (ready && sc.menu && sc.menu.desc)  || fb.desc  || ''
+      };
+
+      li = document.createElement('li');
+      li.className = 'menu-item';
+      var card = makeMenuCard(id, info, ready);
+      li.appendChild(card);
+      dom.menuList.appendChild(li);
+      if (ready) { menuCards.push(id); }
+    }
+
+    // 카드 개수에 맞춰 폭을 계산한다(3개든 5개든 알아서 맞는다)
+    // ul(무대 폭의 84%) 기준 %. 합이 100% 를 넘으면 줄바꿈되므로 99.6 을 예산으로 쓴다.
+    var n = order.length || 1;
+    var gap = 2.9, w = (99.6 - gap * (n - 1)) / n;
+    var items = dom.menuList.getElementsByTagName('li');
+    for (i = 0; i < items.length; i++) {
+      items[i].style.width = w + '%';
+      items[i].style.marginRight = (i === items.length - 1 ? 0 : gap) + '%';
+    }
+  }
+
+  function showMenu() {
+    clearScreen(false);
+    dom.screen.style.display = 'none';
+    dom.bg.removeAttribute('src');
+    dom.bg.style.display = 'none';
+
+    S = null; cid = null; current = null; base = '';
+    ratio = 16 / 9;
+    fitStage();
+
+    renderChrome(MENU_CHROME);
+    renderMenu();
+
+    dom.app.className = 'mode-menu';
+    dom.menu.setAttribute('aria-hidden', 'false');
+    document.title = M.title || '인터랙티브 영상';
+    updateDebug();
+  }
+
   /* ------------------------------------------------------- 화면 초기화 */
 
-  /* keepVideo : 선택 허브처럼 뒤에 마지막 프레임을 남겨야 하는 노드에서 true */
+  /* keepVideo : 선택 허브처럼 뒤에 마지막 프레임을 남겨야 하는 화면에서 true */
   function clearScreen(keepVideo) {
     var i;
     for (i = 0; i < timers.length; i++) { clearTimeout(timers[i]); }
@@ -681,10 +842,8 @@
     removeClass(dom.title, 'on');
     removeClass(dom.badge, 'on');
     removeClass(dom.badge, 'has');
-    removeClass(dom.hero, 'on');
     removeClass(dom.loading, 'on');
-    removeClass(dom.poster, 'on');
-    // 이전 노드의 글자를 남기면(투명해도) 스크린리더가 계속 읽는다
+    // 이전 화면의 글자를 남기면(투명해도) 스크린리더가 계속 읽는다
     empty(dom.title);
     empty(dom.badge);
     forceHideCtrl();
@@ -699,6 +858,9 @@
 
   function render(node) {
     clearScreen(node.type === 'choice');
+
+    dom.app.className = 'mode-play';
+    dom.menu.setAttribute('aria-hidden', 'true');
 
     // 배경 : bg 를 지정하지 않으면 CSS 그라데이션(theme.css #stage)이 보인다
     if (isStr(node.bg))   { dom.bg.src = base + node.bg; dom.bg.style.display = 'block'; }
@@ -731,12 +893,6 @@
       dom.screen.style.display = 'none';
     }
 
-    if (node.type === 'poster') {
-      // 진입 화면 : 그라데이션 배경 위에 재생 삼각형만 노출
-      dom.hero.setAttribute('data-go', node.go || '');
-      addClass(dom.hero, 'on');
-    }
-
     if (node.type === 'choice') {
       renderChoice(node);
     }
@@ -749,12 +905,6 @@
       })(acts[i]);
     }
   }
-
-  // 진입 재생 버튼은 한 번만 바인딩한다(렌더마다 붙이면 핸들러가 쌓인다)
-  on(dom.hero, 'click', function () {
-    var target = dom.hero.getAttribute('data-go');
-    if (target) { go(target); }
-  });
 
   /* --------------------------------------------------------- 선택 허브 */
 
@@ -784,11 +934,49 @@
   }
 
   /* ------------------------------------------------------------ 라우팅 */
+  /*  #/            메뉴
+   *  #/c1          c1 의 시작 노드
+   *  #/c1/hub      c1 의 hub 노드                                        */
 
-  function go(id) {
-    if (!id) { return; }
-    if (location.hash !== '#/' + id) { location.hash = '#/' + id; }
-    else { show(id); }   // 같은 노드 재진입(리셋) 도 허용
+  function goMenu() {
+    if (location.hash !== '#/') { location.hash = '#/'; }
+    else { showMenu(); }
+  }
+
+  function go(nodeId) {
+    if (!nodeId || !cid) { return; }
+    var h = '#/' + cid + '/' + nodeId;
+    if (location.hash !== h) { location.hash = h; }
+    else { show(nodeId); }   // 같은 노드 재진입(리셋) 도 허용
+  }
+
+  function enterContent(id, nodeId) {
+    var sc = ALL[id];
+    if (!sc || !sc.nodes) { warn('없는 편 : ' + id); showMenu(); return; }
+
+    if (cid !== id) {
+      S = sc;
+      cid = id;
+      base = S.base || '';
+      if (base && base.charAt(base.length - 1) !== '/') { base += '/'; }
+
+      ratio = 16 / 9;
+      if (isStr(S.aspect) && S.aspect.indexOf(':') > 0) {
+        var p = S.aspect.split(':');
+        ratio = parseFloat(p[0]) / parseFloat(p[1]);
+      }
+
+      var sv = (S.stage && S.stage.video) || { x: 15.0, y: 21.4, w: 70.0, h: 70.0 };
+      dom.screen.style.left   = sv.x + '%';
+      dom.screen.style.top    = sv.y + '%';
+      dom.screen.style.width  = sv.w + '%';
+      dom.screen.style.height = sv.h + '%';
+
+      renderChrome(S.chrome);
+      fitStage();
+    }
+
+    show(nodeId || S.start);
   }
 
   function show(id) {
@@ -802,10 +990,17 @@
 
   function readHash() {
     var h = location.hash.replace(/^#\/?/, '');
-    return h || S.start;
+    var parts = h.split('/');
+    return { content: parts[0] || null, node: parts[1] || null };
   }
 
-  on(window, 'hashchange', function () { show(readHash()); });
+  function route() {
+    var r = readHash();
+    if (!r.content || !ALL[r.content]) { showMenu(); }
+    else { enterContent(r.content, r.node); }
+  }
+
+  on(window, 'hashchange', route);
 
   /* ------------------------------------------------------------- 키보드 */
 
@@ -813,7 +1008,7 @@
     var k = e.keyCode || e.which;
     var t = e.target || e.srcElement;
     var tag = t && t.nodeName ? t.nodeName.toUpperCase() : '';
-    // 버튼/슬라이더에 포커스가 있을 때는 그쪽 기본 동작(Enter·Space)을 방해하지 않는다
+    // 버튼/링크/슬라이더에 포커스가 있을 때는 그쪽 기본 동작을 방해하지 않는다
     var onControl = (tag === 'BUTTON' || tag === 'A' ||
                      t === dom.vbar || t === dom.vvolbar);
 
@@ -821,13 +1016,19 @@
       // 전체화면 중이면 해제가 우선. 브라우저가 알아서 빠져나오는 경우가 많지만
       // 그렇지 않은 환경(키오스크 셸 등)에서 갇히지 않도록 직접 호출한다.
       if (fsEl()) { leaveFS(); return; }
+      if (!S)     { return; }                         // 메뉴에서는 할 일 없음
       if (S.escapeTo) { go(S.escapeTo); }
       return;
     }
-    if (k >= 49 && k <= 57) {                         // 1~9 → 선택지
-      var btns = dom.list.getElementsByTagName('button');
+
+    if (k >= 49 && k <= 57) {                         // 1~9
       var idx = k - 49;
-      if (btns[idx]) { btns[idx].click(); }
+      if (!S) {                                       // 메뉴 : 편 고르기
+        if (menuCards[idx]) { location.hash = '#/' + menuCards[idx]; }
+      } else {                                        // 편 안 : 선택지 고르기
+        var btns = dom.list.getElementsByTagName('button');
+        if (btns[idx]) { btns[idx].click(); }
+      }
       return;
     }
 
@@ -865,51 +1066,52 @@
   function updateDebug() {
     if (dom.debug.hidden) { return; }
     empty(dom.debug);
-    var key, a;
-    for (key in S.nodes) {
-      if (!S.nodes.hasOwnProperty(key)) { continue; }
-      a = document.createElement('a');
-      a.href = '#/' + key;
-      a.appendChild(document.createTextNode((key === current ? '▶' : '') + key));
-      dom.debug.appendChild(a);
+
+    var a = document.createElement('a');
+    a.href = '#/';
+    a.appendChild(document.createTextNode((S ? '' : '▶') + 'menu'));
+    dom.debug.appendChild(a);
+
+    var order = M.order || [], i, id, key;
+    for (i = 0; i < order.length; i++) {
+      id = order[i];
+      if (!ALL[id] || !ALL[id].nodes) { continue; }
+      for (key in ALL[id].nodes) {
+        if (!ALL[id].nodes.hasOwnProperty(key)) { continue; }
+        a = document.createElement('a');
+        a.href = '#/' + id + '/' + key;
+        a.appendChild(document.createTextNode(
+          ((id === cid && key === current) ? '▶' : '') + id + ':' + key));
+        dom.debug.appendChild(a);
+      }
     }
   }
 
   /* ---------------------------------------------------------------- 부트 */
 
   function boot() {
-    if (!S || !S.nodes) {
-      warn('scenario 를 찾지 못했습니다. content/<id>/scenario.js 를 확인하세요.');
-      return;
+    var any = false, k;
+    for (k in ALL) { if (ALL.hasOwnProperty(k)) { any = true; break; } }
+    if (!any) {
+      warn('시나리오를 찾지 못했습니다. index.html 의 content/<id>/scenario.js 를 확인하세요.');
     }
-
-    base = S.base || '';
-    if (base && base.charAt(base.length - 1) !== '/') { base += '/'; }
-
-    if (isStr(S.aspect) && S.aspect.indexOf(':') > 0) {
-      var p = S.aspect.split(':');
-      ratio = parseFloat(p[0]) / parseFloat(p[1]);
+    if (!M.order) {
+      // 메뉴 구성표가 없으면 등록된 편을 그대로 순서로 삼는다
+      M.order = [];
+      for (k in ALL) { if (ALL.hasOwnProperty(k)) { M.order.push(k); } }
     }
-
-    // 영상 무대 좌표(%) 주입
-    var sv = (S.stage && S.stage.video) || { x: 15.4, y: 22.8, w: 69.2, h: 71.6 };
-    dom.screen.style.left   = sv.x + '%';
-    dom.screen.style.top    = sv.y + '%';
-    dom.screen.style.width  = sv.w + '%';
-    dom.screen.style.height = sv.h + '%';
 
     collectRates();
     setRate(rate);
     updateVolUI();
 
-    renderChrome();
     fitStage();
     on(window, 'resize', fitStage);
     on(window, 'orientationchange', function () { setTimeout(fitStage, 120); });
 
     if (location.search.indexOf('debug=1') >= 0) { dom.debug.hidden = false; }
 
-    show(readHash());
+    route();
   }
 
   if (document.readyState === 'complete' || document.readyState === 'interactive') {

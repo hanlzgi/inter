@@ -123,8 +123,39 @@ body {
 .choice-list .btn:before { background: #8b7bc4; }      /* → 화살대 */
 .choice-list .btn:after  { border-color: #8b7bc4; }    /* → 화살촉 */
 
-/* --- 진입 재생 삼각형 --- */
-.hero-triangle { border-left-color: #ffffff; }
+/* --- 통합 메뉴 --- */
+.menu-title { color: #241c48; }
+.menu-sub   { color: #4a3f78; }
+.menu-hint  { color: #6b5f96; }
+
+.menu-card {
+  background: #ffffff;
+  -webkit-box-shadow: 0 1rem 2.6rem rgba(52, 38, 90, .22);
+          box-shadow: 0 1rem 2.6rem rgba(52, 38, 90, .22);
+}
+.menu-card:hover,
+.menu-card:focus {
+  -webkit-box-shadow: 0 1.6rem 3.6rem rgba(52, 38, 90, .34);
+          box-shadow: 0 1.6rem 3.6rem rgba(52, 38, 90, .34);
+  -webkit-transform: translateY(-.8rem);
+      -ms-transform: translateY(-.8rem);
+          transform: translateY(-.8rem);
+}
+.menu-thumb  { background: #2a2140; }
+.menu-badge  { color: #ffffff; background: #6d5cb8; }
+.menu-off    { color: #ffffff; background: #9b93b4; }
+.menu-label  { color: #241c48; }
+.menu-desc   { color: #5b5183; }
+
+/* 준비되지 않은 편은 흐리게 */
+.menu-card.is-off { background: rgba(255, 255, 255, .58); }
+.menu-card.is-off:hover {
+  -webkit-transform: none; -ms-transform: none; transform: none;
+  -webkit-box-shadow: 0 1rem 2.6rem rgba(52, 38, 90, .22);
+          box-shadow: 0 1rem 2.6rem rgba(52, 38, 90, .22);
+}
+.menu-card.is-off .menu-label { color: #6f668f; }
+.menu-card.is-off .menu-thumb { background: #b9b0d2; }
 
 /* --- 재생 컨트롤바 : 어두운 스크림 위 흰 아이콘 --- */
 .vctrl {

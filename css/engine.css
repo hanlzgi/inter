@@ -60,16 +60,12 @@ html, body {
   background: #000;
   border-radius: 1rem;
 }
-#screen video,
-#screen-poster {
+#screen video {
   position: absolute; top: 0; left: 0;
   display: block; width: 100%; height: 100%;
   object-fit: cover; font-family: "object-fit:cover";
   background: #000;
 }
-/* 포스터는 장식이므로 클릭을 절대 가로채지 않는다(투명해도 이벤트는 먹는다) */
-#screen-poster { z-index: 2; opacity: 0; pointer-events: none; }
-#screen-poster.on { opacity: 1; }
 
 /* 자동재생 차단 시 뜨는 탭 버튼 */
 .tap-to-play {
@@ -257,6 +253,106 @@ html, body {
 .chrome .ic-fs i:before { border-top-width: .36rem;    border-right-width: .36rem; }
 .chrome .ic-fs i:after  { border-bottom-width: .36rem; border-left-width: .36rem; }
 
+
+/* ======================================================== 통합 메뉴 */
+/* 어떤 편을 볼지 고르는 화면. 플레이어와 같은 무대(16:9) 안에서 그린다.
+   카드 표지는 이미지가 아니라 그 편 시작 영상의 첫 컷이다. */
+
+.menu { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* 모드 전환 : #app 의 클래스 하나로 메뉴/플레이어를 갈아 끼운다 */
+.mode-menu .menu       { display: block; }
+.mode-menu .layer-stage,
+.mode-menu .node-head,
+.mode-menu .actions,
+.mode-menu .choice     { display: none; }
+.mode-play .menu       { display: none; }
+
+.menu-head { position: absolute; left: 8%; right: 8%; top: 11%; text-align: center; }
+.menu-title { margin: 0; font-size: 5.6rem; font-weight: 700; line-height: 1.2; }
+.menu-sub   { margin: 1.8rem 0 0; font-size: 2.6rem; font-weight: 500; }
+
+.menu-list {
+  position: absolute; left: 8%; right: 8%; top: 32%;
+  margin: 0; padding: 0; list-style: none;
+  font-size: 0; white-space: nowrap;
+}
+/* 폭과 간격은 카드 개수에 맞춰 engine.js 가 넣는다 */
+.menu-item { display: inline-block; vertical-align: top; }
+
+.menu-card {
+  display: block;
+  border-radius: 1.6rem;
+  overflow: hidden;
+  padding: 0 0 2.2rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.menu-card:focus { outline: .35rem solid #7d67c8; outline-offset: .4rem; }
+
+/* 표지 : 16:9 를 aspect-ratio 없이 padding-bottom 비율로 잡는다(호환 우선) */
+.menu-thumb {
+  position: relative; display: block;
+  width: 100%; height: 0; padding-bottom: 56.25%;
+  overflow: hidden;
+}
+.menu-thumb-v {
+  position: absolute; left: 0; top: 0;
+  display: block; width: 100%; height: 100%;
+  object-fit: cover; font-family: "object-fit:cover";
+}
+
+/* 카드마다 설명 줄 수가 달라도 높이가 어긋나지 않도록 최소 높이를 준다
+   (inline-block 은 vertical-align:top 이라 아래쪽이 들쭉날쭉해 보인다) */
+.menu-body {
+  display: block;
+  min-height: 17rem;
+  padding: 1.7rem 1.8rem 0;
+  text-align: left;
+}
+
+.menu-badge {
+  display: inline-block; vertical-align: middle;
+  padding: 0 1.2rem; height: 3.6rem;
+  border-radius: 999px;
+  font-size: 1.9rem; font-weight: 700; line-height: 3.6rem;
+  white-space: nowrap;
+}
+.menu-off {
+  display: inline-block; vertical-align: middle;
+  margin-left: .8rem;
+  padding: 0 1.2rem; height: 3.6rem;
+  border-radius: 999px;
+  font-size: 1.9rem; font-weight: 700; line-height: 3.6rem;
+  white-space: nowrap;
+}
+.menu-label {
+  display: block; margin: 1.3rem 0 0;
+  font-size: 2.8rem; font-weight: 700; line-height: 1.3;
+  white-space: normal;
+}
+.menu-desc {
+  display: block; margin: .8rem 0 0;
+  font-size: 1.9rem; font-weight: 400; line-height: 1.45;
+  white-space: normal;
+}
+
+/* 준비되지 않은 편 */
+.menu-card.is-off { cursor: default; }
+
+.menu-hint {
+  position: absolute; left: 0; right: 0; bottom: 16%;
+  margin: 0; text-align: center;
+  font-size: 1.9rem;
+}
+
+/* 좁은 화면 : 카드가 4장 나란히 서기엔 좁으므로 설명을 줄인다 */
+@media (max-width: 640px) {
+  .menu-desc  { display: none; }
+  .menu-label { font-size: 3.2rem; }
+  .menu-title { font-size: 6.4rem; }
+}
+
 /* =========================================================== 머리글 */
 /* 시안 기준 : 좌측 12.9%, 아래쪽 정렬. 배지가 없으면 제목만 같은 자리에 남는다. */
 .node-head {
@@ -299,7 +395,7 @@ html, body {
    (z-index 없이는 DOM 순서상 .choice 가 크롬 버튼을 가려 홈/건너뛰기가 눌리지 않는다) */
 .chrome    { z-index: 3; }
 .actions   { z-index: 3; }
-.hero-play { z-index: 2; }
+.menu      { z-index: 2; }
 .choice    { z-index: 1; }
 
 .chrome { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
@@ -420,30 +516,6 @@ html, body {
           transform: rotate(45deg);
 }
 
-/* ------------------------------------------------------ 진입 재생 버튼 */
-.hero-play {
-  position: absolute; top: 50%; left: 50%;
-  width: 14rem; height: 14rem;
-  margin: 0; padding: 0; border: 0; cursor: pointer;
-  background: transparent;
-  display: none;
-  -webkit-transform: translate(-50%, -50%);
-      -ms-transform: translate(-50%, -50%);
-          transform: translate(-50%, -50%);
-}
-.hero-play.on { display: block; }
-.hero-play:focus { outline: .3rem solid #7d67c8; outline-offset: 1rem; }
-.hero-triangle {
-  display: block; margin: 0 auto;
-  width: 0; height: 0;
-  border-top: 5rem solid transparent;
-  border-bottom: 5rem solid transparent;
-  border-left: 8.2rem solid #fff;
-  -webkit-filter: drop-shadow(0 .6rem 1.6rem rgba(40, 28, 74, .4));
-          filter: drop-shadow(0 .6rem 1.6rem rgba(40, 28, 74, .4));
-}
-.hero-play:hover .hero-triangle { opacity: .82; }
-
 /* ------------------------------------------------------------- 로딩 표시 */
 .loading {
   position: absolute; z-index: 6; left: 50%; bottom: 11.5%;
@@ -502,7 +574,6 @@ html, body {
 /* --------------------------------------------------------------- 전환 */
 /* 트랜지션은 한 곳에 모아 둔다. 값 변경은 여기서. */
 .layer-dim,
-#screen-poster,
 .node-title,
 .node-badge,
 .choice-panel,
@@ -518,6 +589,10 @@ html, body {
   -webkit-transition: background-color .18s ease;
           transition: background-color .18s ease;
 }
+.menu-card {
+  -webkit-transition: -webkit-transform .18s ease, -webkit-box-shadow .18s ease;
+          transition: transform .18s ease, box-shadow .18s ease;
+}
 .vctrl {
   -webkit-transition: opacity .2s ease;
           transition: opacity .2s ease;
@@ -529,8 +604,8 @@ html, body {
 
 /* 모션 최소화 설정 존중 */
 @media (prefers-reduced-motion: reduce) {
-  .layer-dim, #screen-poster, .node-title, .node-badge, .choice-panel,
-  .loading, .btn, .vctrl, .vbar-knob, .vvol-knob {
+  .layer-dim, .node-title, .node-badge, .choice-panel,
+  .loading, .btn, .vctrl, .vbar-knob, .vvol-knob, .menu-card {
     -webkit-transition: none !important;
             transition: none !important;
   }
