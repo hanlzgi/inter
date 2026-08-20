@@ -107,11 +107,14 @@
 
       <!-- 선택 허브 -->
       <div id="choice" class="choice" aria-hidden="true">
-        <div class="choice-panel">
+        <div id="choice-panel" class="choice-panel">
           <div class="choice-inner">
             <div class="choice-mark" aria-hidden="true">?</div>
             <p id="choice-question" class="choice-question"></p>
             <ul id="choice-list" class="choice-list"></ul>
+            <!-- 선택지가 아닌 보조 버튼 자리 (예: 질문 다시 보기).
+                 choice 노드의 actions[] 가 여기로 들어온다. -->
+            <div id="choice-extra" class="choice-extra"></div>
           </div>
         </div>
       </div>

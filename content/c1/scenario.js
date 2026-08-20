@@ -54,7 +54,7 @@ window.SCENARIOS['c1'] = {
   chrome: [
     { icon: 'home',       title: '메뉴로',
       action: 'menu',         x: 2.9,  y: 6.2,  w: 5.9,  h: 10.4 },
-    { label: '건너뛰기',  title: '선택지로 건너뛰기',
+    { label: '선택하기',  title: '선택지로 가기',
       go: 'hub',              x: 72.4, y: 11.4, w: 14.6, h: 6.8 },
     { icon: 'fullscreen', title: '화면 전체 보기',
       action: 'fullscreen',   x: 94.0, y: 5.4,  w: 3.6,  h: 6.4 }
@@ -68,10 +68,8 @@ window.SCENARIOS['c1'] = {
       type:  'video',
       src:   'video/c1_main-1_1.mp4',
       badge: '1931년',
-      title: '내가 김구라면, 일본인처럼 보이는 청년을 만날까?',
-      actions: [
-        { label: '선택하러 가기', go: 'hub' }
-      ]
+      title: '내가 김구라면, 일본인처럼 보이는 청년을 만날까?'
+      /* 하단 버튼 없음 — 우상단 '선택하기' 하나로 통일했다 */
     },
 
     /* 선택 허브 */
@@ -88,6 +86,10 @@ window.SCENARIOS['c1'] = {
         { label: '독립운동에 투신하겠다고 했으니 활동을 모의한다.', go: 'a1' },
         { label: '어느 정도 시간을 두고 관찰한 뒤 판단한다.',       go: 'a2' },
         { label: '일제의 간첩일 수 있으므로 제거한다.',            go: 'a3' }
+      ],
+      /* 선택지가 아닌 보조 버튼. 패널 안 선택지 아래에 놓인다. */
+      actions: [
+        { label: '질문 다시 보기', go: 'q0', ghost: true }
       ]
     },
 
@@ -95,22 +97,19 @@ window.SCENARIOS['c1'] = {
     a1: {
       type:  'video',
       src:   'video/c1_opt-1_1.mp4',
-      title: '독립운동에 투신하겠다고 했으니 활동을 모의한다.',
-      actions: [ { label: '다시 선택하기', go: 'hub' } ]
+      title: '독립운동에 투신하겠다고 했으니 활동을 모의한다.'
     },
 
     a2: {
       type:  'video',
       src:   'video/c1_opt-2_1.mp4',
-      title: '어느 정도 시간을 두고 관찰한 뒤 판단한다.',
-      actions: [ { label: '다시 선택하기', go: 'hub' } ]
+      title: '어느 정도 시간을 두고 관찰한 뒤 판단한다.'
     },
 
     a3: {
       type:  'video',
       src:   'video/c1_opt_3_1.mp4',
-      title: '일제의 간첩일 수 있으므로 제거한다.',
-      actions: [ { label: '다시 선택하기', go: 'hub' } ]
+      title: '일제의 간첩일 수 있으므로 제거한다.'
     }
 
   }

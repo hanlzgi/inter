@@ -50,7 +50,8 @@ html, body {
 /* UI 레이어는 통과시키고, 실제 조작 요소만 되살린다 (원본의 advClick="0" 재현) */
 .layer-ui button,
 .layer-ui a,
-.layer-ui .choice[data-open="1"] { pointer-events: auto; }
+.layer-ui .choice[data-open="1"],
+.layer-ui .choice[data-open="2"] { pointer-events: auto; }
 
 /* ------------------------------------------------------------ 영상 무대 */
 /* 위치·크기는 scenario.stage.video 의 % 값을 engine.js 가 주입한다 */
@@ -448,11 +449,15 @@ html, body {
 }
 
 /* -------------------------------------------------------------- 선택 허브 */
+/* data-open  0 = 허브 노드가 아님(완전 숨김)
+              1 = 열림
+              2 = 치워짐(패널만 왼쪽 밖으로. 다시 누르면 돌아온다) */
 .choice {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   visibility: hidden;
 }
-.choice[data-open="1"] { visibility: visible; }
+.choice[data-open="1"],
+.choice[data-open="2"] { visibility: visible; }
 
 .choice-panel {
   position: absolute; top: 0; left: 0; bottom: 0;
@@ -467,6 +472,14 @@ html, body {
   -webkit-transform: translateX(0);
       -ms-transform: translateX(0);
           transform: translateX(0);
+}
+/* 치워진 상태 : 그림자까지 화면 밖으로 완전히 빼고 클릭도 통과시킨다 */
+.choice[data-open="2"] .choice-panel {
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transform: translateX(-106%);
+      -ms-transform: translateX(-106%);
+          transform: translateX(-106%);
 }
 
 .choice-inner {
@@ -514,6 +527,18 @@ html, body {
   -webkit-transform: rotate(45deg);
       -ms-transform: rotate(45deg);
           transform: rotate(45deg);
+}
+
+/* 선택지가 아닌 보조 버튼 (예: 질문 다시 보기).
+   선택지 아래에 한 칸 띄우고, 선택지보다 작고 흐리게 두어 구분한다. */
+.choice-extra { margin: 5rem 0 0; text-align: center; font-size: 0; }
+.choice-extra:empty { display: none; }
+.choice-extra .btn {
+  display: inline-block;
+  margin: 0 .8rem;
+  padding: 1.4rem 3.4rem;
+  border: 0; cursor: pointer;
+  font-family: inherit; font-size: 2.7rem; font-weight: 700; line-height: 1;
 }
 
 /* ------------------------------------------------------------- 로딩 표시 */
@@ -586,8 +611,12 @@ html, body {
           transition: opacity .3s ease .2s, transform .3s ease .2s;
 }
 .btn {
-  -webkit-transition: background-color .18s ease;
-          transition: background-color .18s ease;
+  -webkit-transition: background-color .18s ease, -webkit-transform .06s ease;
+          transition: background-color .18s ease, transform .06s ease;
+}
+.vbtn {
+  -webkit-transition: background-color .18s ease, -webkit-transform .06s ease;
+          transition: background-color .18s ease, transform .06s ease;
 }
 .menu-card {
   -webkit-transition: -webkit-transform .18s ease, -webkit-box-shadow .18s ease;
@@ -602,12 +631,33 @@ html, body {
           transition: opacity .15s ease;
 }
 
+/* ---------------------------------------------------------- 누른 느낌 */
+/* 버튼을 누르고 있는 동안 오른쪽·아래로 살짝 밀린다.
+   0.25rem = 무대 짧은 변의 0.25% — 1920×1080 에서 약 2.7px(=2pt).
+   rem 이라 창을 키우고 줄여도 눌리는 정도가 같은 비율로 유지된다. */
+.btn:active,
+.vbtn:active {
+  -webkit-transform: translate(.25rem, .25rem);
+      -ms-transform: translate(.25rem, .25rem);
+          transform: translate(.25rem, .25rem);
+}
+/* 메뉴 카드는 hover 로 이미 .8rem 떠 있으므로 그 자리에서 눌린다 */
+.menu-card:active {
+  -webkit-transform: translate(.25rem, -.55rem);
+      -ms-transform: translate(.25rem, -.55rem);
+          transform: translate(.25rem, -.55rem);
+}
+
 /* 모션 최소화 설정 존중 */
 @media (prefers-reduced-motion: reduce) {
   .layer-dim, .node-title, .node-badge, .choice-panel,
-  .loading, .btn, .vctrl, .vbar-knob, .vvol-knob, .menu-card {
+  .loading, .btn, .vbtn, .vctrl, .vbar-knob, .vvol-knob, .menu-card {
     -webkit-transition: none !important;
             transition: none !important;
+  }
+  /* 누름 표시는 위치 이동 대신 그대로 둔다 */
+  .btn:active, .vbtn:active, .menu-card:active {
+    -webkit-transform: none; -ms-transform: none; transform: none;
   }
 }
 

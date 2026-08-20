@@ -72,8 +72,10 @@
     chrome:   $('chrome'),
     actions:  $('actions'),
     choice:   $('choice'),
+    panel:    $('choice-panel'),
     question: $('choice-question'),
     list:     $('choice-list'),
+    extra:    $('choice-extra'),
     loading:  $('loading'),
     narr:     $('aud-narr'),
     sfx:      $('aud-sfx'),
@@ -115,6 +117,7 @@
   var ctrlTimer = null;     // 터치로 띄운 컨트롤바 자동 숨김 핸들
   var sliders = [];         // 드래그 상태를 물어볼 슬라이더들
   var menuCards = [];       // 메뉴에서 숫자키로 고를 수 있는 카드들
+  var choiceOpen = true;    // 선택 허브 패널이 펼쳐져 있는가
 
   /* --------------------------------------------------- 레터박스 계산 */
   /* aspect-ratio / vh 계산에 기대지 않고 JS로 직접 맞춘다(호환 우선). */
@@ -655,6 +658,9 @@
           if (item.title) { b.title = item.title; }
         }
 
+        // 지금 보고 있는 노드로 가는 버튼은 숨기려고 표시해 둔다
+        if (item.go) { b.setAttribute('data-go', item.go); }
+
         b.style.left   = item.x + '%';
         b.style.top    = item.y + '%';
         b.style.width  = item.w + '%';
@@ -671,6 +677,23 @@
       })(items[i]);
     }
     updateFsBtn();
+    updateChromeState();
+  }
+
+  /* 지금 있는 곳으로 가는 크롬 버튼은 숨긴다.
+     (선택 허브에서 '선택하기' 가 자기 자신을 가리키면 눌러도 아무 일이 없어
+      혼란스럽다. 이 두 줄만 지우면 항상 보이는 예전 동작으로 돌아간다) */
+  function updateChromeState() {
+    // 허브 패널을 치워 둔 동안에는 '선택하기' 를 되살린다(패널을 다시 부르는 길)
+    var n = (S && current && S.nodes) ? S.nodes[current] : null;
+    var dismissed = !!(n && n.type === 'choice' && !choiceOpen);
+
+    var btns = dom.chrome.getElementsByTagName('button'), i, go;
+    for (i = 0; i < btns.length; i++) {
+      go = btns[i].getAttribute('data-go');
+      if (go && go === current && !dismissed) { btns[i].style.display = 'none'; }
+      else                                     { btns[i].style.display = ''; }
+    }
   }
 
   /* 메뉴 화면에서 쓰는 크롬 : 전체화면 버튼만 (돌아갈 곳이 없으므로 홈은 뺀다) */
@@ -848,10 +871,12 @@
     empty(dom.badge);
     forceHideCtrl();
     dom.dim.style.opacity = 0;
+    choiceOpen = true;
     dom.choice.setAttribute('data-open', '0');
     dom.choice.setAttribute('aria-hidden', 'true');
     empty(dom.actions);
     empty(dom.list);
+    empty(dom.extra);
   }
 
   /* --------------------------------------------------------- 노드 렌더 */
@@ -897,16 +922,53 @@
       renderChoice(node);
     }
 
-    // 액션 버튼(상시 노출)
+    // 보조 버튼(actions)
+    //   video  노드 → 무대 아래 가운데
+    //   choice 노드 → 선택 허브 패널 안, 선택지 아래
     var acts = node.actions || [], i;
+    var host = (node.type === 'choice') ? dom.extra : dom.actions;
     for (i = 0; i < acts.length; i++) {
       (function (a) {
-        dom.actions.appendChild(makeButton(a.label, !!a.ghost, function () { go(a.go); }));
+        host.appendChild(makeButton(a.label, !!a.ghost, function () { go(a.go); }));
       })(acts[i]);
     }
   }
 
   /* --------------------------------------------------------- 선택 허브 */
+
+  /* 패널 펼치기 / 치우기.
+     치워도 노드는 그대로 hub 다 — 주소도 안 바뀐다. 뒤에 남아 있는 영상
+     마지막 장면을 크게 보고 싶을 때 잠깐 밀어 두는 용도. */
+  function setChoiceOpen(open) {
+    choiceOpen = !!open;
+    dom.choice.setAttribute('data-open', choiceOpen ? '1' : '2');
+    dom.choice.setAttribute('aria-hidden', choiceOpen ? 'false' : 'true');
+
+    // 패널을 치운 목적이 '뒤 화면을 보는 것' 이므로 딤드도 같이 걷는다
+    var n = (S && current && S.nodes) ? S.nodes[current] : null;
+    var d = (n && typeof n.dim === 'number' && n.dim > 0) ? n.dim : 0;
+    dom.dim.style.opacity = choiceOpen ? d : 0;
+
+    updateChromeState();
+  }
+
+  function isChoiceNode() {
+    var n = (S && current && S.nodes) ? S.nodes[current] : null;
+    return !!(n && n.type === 'choice');
+  }
+
+  /* 패널 '밖' 을 누르면 토글한다. 핸들러는 한 번만 붙인다.
+     - 펼쳐진 상태 : 패널 안쪽 클릭은 무시, 바깥쪽만 치운다
+     - 치워진 상태 : 패널이 pointer-events:none 이라 어디를 눌러도 여기로 온다 */
+  on(dom.choice, 'click', function (e) {
+    if (!isChoiceNode()) { return; }
+    var t = e.target || e.srcElement;
+    while (t && t !== dom.choice) {
+      if (t === dom.panel) { return; }
+      t = t.parentNode;
+    }
+    setChoiceOpen(!choiceOpen);
+  });
 
   function renderChoice(node) {
     setText(dom.question, node.question || '');
@@ -924,7 +986,7 @@
 
     dom.choice.setAttribute('aria-hidden', 'false');
     timers.push(setTimeout(function () {
-      dom.choice.setAttribute('data-open', '1');
+      setChoiceOpen(true);
       var first = dom.list.getElementsByTagName('button')[0];
       if (first && first.focus) { try { first.focus(); } catch (e) {} }
     }, node.delay || 200));
@@ -985,6 +1047,7 @@
     current = id;
     document.title = (node.title ? node.title + ' — ' : '') + (S.title || '');
     render(node);
+    updateChromeState();
     updateDebug();
   }
 
@@ -1025,6 +1088,8 @@
       var idx = k - 49;
       if (!S) {                                       // 메뉴 : 편 고르기
         if (menuCards[idx]) { location.hash = '#/' + menuCards[idx]; }
+      } else if (isChoiceNode() && !choiceOpen) {     // 패널이 치워져 있으면 먼저 편다
+        setChoiceOpen(true);
       } else {                                        // 편 안 : 선택지 고르기
         var btns = dom.list.getElementsByTagName('button');
         if (btns[idx]) { btns[idx].click(); }
