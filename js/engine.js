@@ -11,6 +11,9 @@
  *                          (ended 는 재생 버튼 아이콘 복귀에만 쓴다)
  *  4) 포스터 이미지 없음 : 별도 포스터 이미지를 두지 않는다.
  *                          메뉴 썸네일도 영상의 첫 컷을 그대로 쓴다.
+ *  4-1) 선택 허브는 '노드' 가 아니라 '팝업' 이다.
+ *                          영상 노드(current) 위에 choice 노드(overlay)가 겹친다.
+ *                          팝업을 열고 닫아도 영상 플레이어는 전혀 건드리지 않는다.
  *  5) 호환 우선 : ES5 문법만. fetch / Promise / 화살표함수 / 템플릿리터럴 /
  *                ES모듈 미사용. file:// 로 열어도 그대로 동작.
  *                전체화면 API 는 벤더 접두사를 모두 훑는다.
@@ -108,7 +111,11 @@
   var S = null;             // 현재 편의 시나리오 (메뉴에서는 null)
   var cid = null;           // 현재 편 id
   var base = '';            // 콘텐츠 에셋 기준 경로
-  var current = null;       // 현재 노드 id
+  var current = null;       // 재생 중인 '영상' 노드 id
+  var overlay = null;       // 그 위에 떠 있는 '선택 허브' 노드 id (없으면 null)
+  var ctimers = [];         // 팝업 전용 타이머 (영상 노드 타이머와 섞이면 안 된다)
+  var quiet = false;        // true 인 동안 hashchange 를 한 번 무시한다
+  var resumeOnClose = false; // 팝업을 열기 전 영상이 재생 중이었는가 (닫을 때 이어서 틀지 판단)
   var ratio = 16 / 9;
   var timers = [];          // 화면 전환 시 정리할 setTimeout 핸들
   var rate = 1;             // 배속 : 편이 바뀌어도 유지된다
@@ -117,7 +124,6 @@
   var ctrlTimer = null;     // 터치로 띄운 컨트롤바 자동 숨김 핸들
   var sliders = [];         // 드래그 상태를 물어볼 슬라이더들
   var menuCards = [];       // 메뉴에서 숫자키로 고를 수 있는 카드들
-  var choiceOpen = true;    // 선택 허브 패널이 펼쳐져 있는가
 
   /* --------------------------------------------------- 레터박스 계산 */
   /* aspect-ratio / vh 계산에 기대지 않고 JS로 직접 맞춘다(호환 우선). */
@@ -145,10 +151,10 @@
     }
   }
 
-  function playAudio(el, cfg) {
+  function playAudio(el, cfg, bucket) {
     if (!cfg || !isStr(cfg.src)) { return; }
     var delay = cfg.delay || 0;
-    timers.push(setTimeout(function () {
+    (bucket || timers).push(setTimeout(function () {
       try {
         el.src = base + cfg.src;
         el.volume = ((typeof cfg.volume === 'number') ? cfg.volume : 0.8) * vol;
@@ -192,10 +198,12 @@
     var p = v.play();
     if (p && p['catch']) {
       p['catch'](function () {
-        // 자동재생 차단 → 사용자 제스처 유도
         removeClass(dom.loading, 'on');
-        addClass(dom.tap, 'on');
         updateToggle();
+        // 팝업이 떠 있는 동안 우리가 일부러 멈춘 것이므로 안내를 띄우지 않는다
+        if (overlay) { return; }
+        // 자동재생 차단 → 사용자 제스처 유도
+        addClass(dom.tap, 'on');
         showCtrl(false);            // 멈춘 상태에서는 컨트롤바를 띄워 둔다
       });
     }
@@ -497,6 +505,7 @@
 
   /* ---- 노출 / 숨김 ---- */
   function showCtrl(autoHide) {
+    if (overlay) { return; }        // 팝업이 떠 있는 동안에는 가린다
     if (!isVideoNode()) { return; }
     addClass(dom.vctrl, 'on');
     dom.vctrl.setAttribute('aria-hidden', 'false');
@@ -684,15 +693,13 @@
      (선택 허브에서 '선택하기' 가 자기 자신을 가리키면 눌러도 아무 일이 없어
       혼란스럽다. 이 두 줄만 지우면 항상 보이는 예전 동작으로 돌아간다) */
   function updateChromeState() {
-    // 허브 패널을 치워 둔 동안에는 '선택하기' 를 되살린다(패널을 다시 부르는 길)
-    var n = (S && current && S.nodes) ? S.nodes[current] : null;
-    var dismissed = !!(n && n.type === 'choice' && !choiceOpen);
-
+    // 지금 보고 있는 곳(팝업이 떠 있으면 그 팝업)을 가리키는 버튼은 숨긴다
+    var here = overlay || current;
     var btns = dom.chrome.getElementsByTagName('button'), i, go;
     for (i = 0; i < btns.length; i++) {
       go = btns[i].getAttribute('data-go');
-      if (go && go === current && !dismissed) { btns[i].style.display = 'none'; }
-      else                                     { btns[i].style.display = ''; }
+      if (go && go === here) { btns[i].style.display = 'none'; }
+      else                   { btns[i].style.display = ''; }
     }
   }
 
@@ -837,6 +844,7 @@
     dom.bg.removeAttribute('src');
     dom.bg.style.display = 'none';
 
+    closeOverlay(false);
     S = null; cid = null; current = null; base = '';
     ratio = 16 / 9;
     fitStage();
@@ -852,15 +860,14 @@
 
   /* ------------------------------------------------------- 화면 초기화 */
 
-  /* keepVideo : 선택 허브처럼 뒤에 마지막 프레임을 남겨야 하는 화면에서 true */
-  function clearScreen(keepVideo) {
+  /* 영상 노드를 새로 그리기 전 정리. 팝업(선택 허브)은 여기서 다루지 않는다. */
+  function clearScreen() {
     var i;
     for (i = 0; i < timers.length; i++) { clearTimeout(timers[i]); }
     timers = [];
 
     stopAudio();
-    if (keepVideo) { try { dom.video.pause(); } catch (e) {} }
-    else           { stopVideo(); }
+    stopVideo();
 
     removeClass(dom.title, 'on');
     removeClass(dom.badge, 'on');
@@ -871,18 +878,13 @@
     empty(dom.badge);
     forceHideCtrl();
     dom.dim.style.opacity = 0;
-    choiceOpen = true;
-    dom.choice.setAttribute('data-open', '0');
-    dom.choice.setAttribute('aria-hidden', 'true');
     empty(dom.actions);
-    empty(dom.list);
-    empty(dom.extra);
   }
 
   /* --------------------------------------------------------- 노드 렌더 */
 
   function render(node) {
-    clearScreen(node.type === 'choice');
+    clearScreen();
 
     dom.app.className = 'mode-play';
     dom.menu.setAttribute('aria-hidden', 'true');
@@ -908,67 +910,106 @@
       timers.push(setTimeout(function () { dom.dim.style.opacity = node.dim; }, 20));
     }
 
-    // 유형별
+    // 영상
     if (node.type === 'video') {
       dom.screen.style.display = 'block';
       playVideo(node);
-    } else if (node.type === 'choice' && hasSource()) {
-      dom.screen.style.display = 'block';   // 선택 허브 뒤에 마지막 프레임을 남긴다
     } else {
       dom.screen.style.display = 'none';
     }
 
-    if (node.type === 'choice') {
-      renderChoice(node);
-    }
-
-    // 보조 버튼(actions)
-    //   video  노드 → 무대 아래 가운데
-    //   choice 노드 → 선택 허브 패널 안, 선택지 아래
+    // 보조 버튼 — 영상 노드는 무대 아래 가운데에 놓는다
     var acts = node.actions || [], i;
-    var host = (node.type === 'choice') ? dom.extra : dom.actions;
     for (i = 0; i < acts.length; i++) {
       (function (a) {
-        host.appendChild(makeButton(a.label, !!a.ghost, function () { go(a.go); }));
+        dom.actions.appendChild(makeButton(a.label, !!a.ghost, function () { go(a.go); }));
       })(acts[i]);
     }
   }
 
-  /* --------------------------------------------------------- 선택 허브 */
+  /* ================================================ 선택 허브 (팝업) */
+  /* 허브는 노드가 아니라 '영상 노드 위에 겹치는 팝업' 이다.
+     열고 닫아도 영상 플레이어(소스·재생 위치·재생 여부)를 건드리지 않는다.
+     그래서 팝업을 닫으면 하던 영상이 그대로 이어진다. */
 
-  /* 패널 펼치기 / 치우기.
-     치워도 노드는 그대로 hub 다 — 주소도 안 바뀐다. 뒤에 남아 있는 영상
-     마지막 장면을 크게 보고 싶을 때 잠깐 밀어 두는 용도. */
-  function setChoiceOpen(open) {
-    choiceOpen = !!open;
-    dom.choice.setAttribute('data-open', choiceOpen ? '1' : '2');
-    dom.choice.setAttribute('aria-hidden', choiceOpen ? 'false' : 'true');
-
-    // 패널을 치운 목적이 '뒤 화면을 보는 것' 이므로 딤드도 같이 걷는다
-    var n = (S && current && S.nodes) ? S.nodes[current] : null;
-    var d = (n && typeof n.dim === 'number' && n.dim > 0) ? n.dim : 0;
-    dom.dim.style.opacity = choiceOpen ? d : 0;
-
-    updateChromeState();
+  function clearChoice() {
+    var i;
+    for (i = 0; i < ctimers.length; i++) { clearTimeout(ctimers[i]); }
+    ctimers = [];
+    stopAudio();                       // 팝업이 틀던 나레이션/효과음만 끈다
+    dom.choice.setAttribute('data-open', '0');
+    dom.choice.setAttribute('aria-hidden', 'true');
+    dom.dim.style.opacity = 0;
+    empty(dom.question);
+    empty(dom.list);
+    empty(dom.extra);
   }
 
-  function isChoiceNode() {
-    var n = (S && current && S.nodes) ? S.nodes[current] : null;
-    return !!(n && n.type === 'choice');
+  /* 팝업이 떠 있는 동안 밑의 영상을 멈춘다. 소스와 재생 위치는 그대로 둔다. */
+  function pauseUnder() {
+    if (!hasSource()) { return; }
+    try { dom.video.pause(); } catch (e) {}
+    forceHideCtrl();      // 멈췄다고 컨트롤바가 팝업 뒤에 남지 않도록
+    updateToggle();
   }
 
-  /* 패널 '밖' 을 누르면 토글한다. 핸들러는 한 번만 붙인다.
-     - 펼쳐진 상태 : 패널 안쪽 클릭은 무시, 바깥쪽만 치운다
-     - 치워진 상태 : 패널이 pointer-events:none 이라 어디를 눌러도 여기로 온다 */
-  on(dom.choice, 'click', function (e) {
-    if (!isChoiceNode()) { return; }
-    var t = e.target || e.srcElement;
-    while (t && t !== dom.choice) {
-      if (t === dom.panel) { return; }
-      t = t.parentNode;
+  /* 팝업을 열기 전에 재생 중이었을 때만 이어서 튼다.
+     사용자가 직접 멈춰 놓고 팝업을 열었다면 멈춘 채로 둔다. */
+  function resumeUnder() {
+    if (!hasSource()) { return; }
+    var v = dom.video, p;
+    if (resumeOnClose && v.paused && !v.ended) {
+      p = v.play();
+      if (p && p['catch']) {
+        p['catch'](function () { addClass(dom.tap, 'on'); updateToggle(); showCtrl(false); });
+      }
     }
-    setChoiceOpen(!choiceOpen);
-  });
+    updateToggle();
+    // 여전히 멈춰 있으면 컨트롤바를 띄워 둔다(이어서 볼 수 있도록)
+    if (v.paused || v.ended) { showCtrl(false); }
+  }
+
+  function openOverlay(id) {
+    var node = S.nodes[id];
+    if (!node) { return; }
+
+    // 밑에 깔릴 영상이 아직 없으면(주소로 곧장 들어온 경우) 시작 노드를 먼저 띄운다
+    var fresh = false;
+    if (!current) { showNode(S.start); fresh = true; }
+
+    overlay = id;
+
+    // 닫을 때 이어서 틀지 여부를 '멈추기 전에' 기억해 둔다
+    resumeOnClose = fresh || (hasSource() && !dom.video.paused && !dom.video.ended);
+    pauseUnder();
+
+    clearChoice();
+    renderChoice(node);
+    updateChromeState();
+    updateDebug();
+  }
+
+  /* resume 이 true 일 때만 밑의 영상을 이어서 튼다.
+     다른 영상 노드로 넘어가는 길(선택지 클릭·메뉴로 나가기)에서는 false 로 부른다 —
+     어차피 곧 새 영상을 걸 것이므로 여기서 옛 영상을 다시 틀면 안 된다. */
+  function closeOverlay(resume) {
+    if (!overlay) { return; }
+    overlay = null;
+    clearChoice();
+    updateChromeState();
+    updateDebug();
+    if (resume) { resumeUnder(); }
+  }
+
+  /* 팝업만 닫고 영상은 이어서 튼다. 주소도 조용히 영상 노드로 되돌린다
+     (주소를 바꾸면 hashchange 가 영상을 다시 틀어 버리므로 quiet 로 한 번 막는다) */
+  function dismissOverlay() {
+    if (!overlay) { return; }
+    closeOverlay(true);
+    if (!cid || !current) { return; }
+    var h = '#/' + cid + '/' + current;
+    if (location.hash !== h) { quiet = true; location.hash = h; }
+  }
 
   function renderChoice(node) {
     setText(dom.question, node.question || '');
@@ -984,16 +1025,37 @@
       })(opts[i], i);
     }
 
+    // 선택지가 아닌 보조 버튼(예: 질문 다시 보기)
+    var acts = node.actions || [];
+    for (i = 0; i < acts.length; i++) {
+      (function (a) {
+        dom.extra.appendChild(makeButton(a.label, !!a.ghost, function () { go(a.go); }));
+      })(acts[i]);
+    }
+
     dom.choice.setAttribute('aria-hidden', 'false');
-    timers.push(setTimeout(function () {
-      setChoiceOpen(true);
+    ctimers.push(setTimeout(function () {
+      dom.choice.setAttribute('data-open', '1');
+      if (typeof node.dim === 'number' && node.dim > 0) { dom.dim.style.opacity = node.dim; }
       var first = dom.list.getElementsByTagName('button')[0];
       if (first && first.focus) { try { first.focus(); } catch (e) {} }
     }, node.delay || 200));
 
-    playAudio(dom.sfx,  node.sfx);
-    playAudio(dom.narr, node.narration);
+    playAudio(dom.sfx,  node.sfx,       ctimers);
+    playAudio(dom.narr, node.narration, ctimers);
   }
+
+  /* 팝업 바깥을 누르면 닫는다(패널 안쪽은 반응하지 않는다).
+     닫히면 클릭이 그대로 통과하므로 아래 영상 컨트롤을 바로 쓸 수 있다. */
+  on(dom.choice, 'click', function (e) {
+    if (!overlay) { return; }
+    var t = e.target || e.srcElement;
+    while (t && t !== dom.choice) {
+      if (t === dom.panel) { return; }
+      t = t.parentNode;
+    }
+    dismissOverlay();
+  });
 
   /* ------------------------------------------------------------ 라우팅 */
   /*  #/            메뉴
@@ -1009,7 +1071,7 @@
     if (!nodeId || !cid) { return; }
     var h = '#/' + cid + '/' + nodeId;
     if (location.hash !== h) { location.hash = h; }
-    else { show(nodeId); }   // 같은 노드 재진입(리셋) 도 허용
+    else { show(nodeId); }   // 같은 곳 재진입(리셋) 도 허용
   }
 
   function enterContent(id, nodeId) {
@@ -1041,9 +1103,17 @@
     show(nodeId || S.start);
   }
 
+  /* 목적지가 팝업(choice)이면 팝업만 띄우고, 영상 노드면 팝업을 닫고 새로 그린다 */
   function show(id) {
     var node = S.nodes[id];
     if (!node) { warn('알 수 없는 노드 : ' + id); node = S.nodes[S.start]; id = S.start; }
+    if (node.type === 'choice') { openOverlay(id); return; }
+    closeOverlay(false);
+    showNode(id);
+  }
+
+  function showNode(id) {
+    var node = S.nodes[id];
     current = id;
     document.title = (node.title ? node.title + ' — ' : '') + (S.title || '');
     render(node);
@@ -1063,7 +1133,11 @@
     else { enterContent(r.content, r.node); }
   }
 
-  on(window, 'hashchange', route);
+  on(window, 'hashchange', function () {
+    // dismissOverlay() 가 주소만 조용히 되돌리는 경우 — 영상을 다시 틀지 않는다
+    if (quiet) { quiet = false; return; }
+    route();
+  });
 
   /* ------------------------------------------------------------- 키보드 */
 
@@ -1080,6 +1154,7 @@
       // 그렇지 않은 환경(키오스크 셸 등)에서 갇히지 않도록 직접 호출한다.
       if (fsEl()) { leaveFS(); return; }
       if (!S)     { return; }                         // 메뉴에서는 할 일 없음
+      if (overlay) { dismissOverlay(); return; }      // 떠 있는 팝업부터 닫는다
       if (S.escapeTo) { go(S.escapeTo); }
       return;
     }
@@ -1088,9 +1163,7 @@
       var idx = k - 49;
       if (!S) {                                       // 메뉴 : 편 고르기
         if (menuCards[idx]) { location.hash = '#/' + menuCards[idx]; }
-      } else if (isChoiceNode() && !choiceOpen) {     // 패널이 치워져 있으면 먼저 편다
-        setChoiceOpen(true);
-      } else {                                        // 편 안 : 선택지 고르기
+      } else if (overlay) {                           // 팝업이 떠 있을 때만 선택지 고르기
         var btns = dom.list.getElementsByTagName('button');
         if (btns[idx]) { btns[idx].click(); }
       }
@@ -1146,7 +1219,7 @@
         a = document.createElement('a');
         a.href = '#/' + id + '/' + key;
         a.appendChild(document.createTextNode(
-          ((id === cid && key === current) ? '▶' : '') + id + ':' + key));
+          ((id === cid && (key === current || key === overlay)) ? '▶' : '') + id + ':' + key));
         dom.debug.appendChild(a);
       }
     }

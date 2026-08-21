@@ -50,8 +50,7 @@ html, body {
 /* UI 레이어는 통과시키고, 실제 조작 요소만 되살린다 (원본의 advClick="0" 재현) */
 .layer-ui button,
 .layer-ui a,
-.layer-ui .choice[data-open="1"],
-.layer-ui .choice[data-open="2"] { pointer-events: auto; }
+.layer-ui .choice[data-open="1"] { pointer-events: auto; }
 
 /* ------------------------------------------------------------ 영상 무대 */
 /* 위치·크기는 scenario.stage.video 의 % 값을 engine.js 가 주입한다 */
@@ -449,15 +448,14 @@ html, body {
 }
 
 /* -------------------------------------------------------------- 선택 허브 */
-/* data-open  0 = 허브 노드가 아님(완전 숨김)
-              1 = 열림
-              2 = 치워짐(패널만 왼쪽 밖으로. 다시 누르면 돌아온다) */
+/* 선택 허브는 영상 노드 위에 겹치는 '팝업' 이다.
+   data-open  0 = 닫힘(완전 숨김, 클릭도 통과 → 아래 영상 컨트롤이 바로 먹는다)
+              1 = 열림 */
 .choice {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   visibility: hidden;
 }
-.choice[data-open="1"],
-.choice[data-open="2"] { visibility: visible; }
+.choice[data-open="1"] { visibility: visible; }
 
 .choice-panel {
   position: absolute; top: 0; left: 0; bottom: 0;
@@ -473,14 +471,7 @@ html, body {
       -ms-transform: translateX(0);
           transform: translateX(0);
 }
-/* 치워진 상태 : 그림자까지 화면 밖으로 완전히 빼고 클릭도 통과시킨다 */
-.choice[data-open="2"] .choice-panel {
-  opacity: 0;
-  pointer-events: none;
-  -webkit-transform: translateX(-106%);
-      -ms-transform: translateX(-106%);
-          transform: translateX(-106%);
-}
+
 
 .choice-inner {
   position: absolute; top: 50%; left: 0;
