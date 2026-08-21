@@ -490,7 +490,7 @@ html, body {
 }
 .choice-question {
   margin: 0 0 7rem;
-  font-size: 7rem; font-weight: 700; line-height: 1.3;
+  font-size: 6rem; font-weight: 700; line-height: 1.3;
 }
 .choice-list { margin: 0; padding: 0; list-style: none; }
 .choice-list li { margin: 0 0 3.3rem; }
