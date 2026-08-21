@@ -19,6 +19,8 @@
 
     <!-- z2 : 영상 무대 -->
     <div class="layer layer-stage">
+     <!-- 가운데 16:9 틀. 이 안의 좌표는 전부 '틀 기준 %' 라 브라우저 크기와 무관하다. -->
+     <div class="frame" id="frame-v">
       <div id="screen">
         <video id="video" playsinline webkit-playsinline preload="auto"></video>
         <button type="button" id="tap-to-play" class="tap-to-play">
@@ -72,16 +74,20 @@
 
         </div>
       </div>
+     </div>
     </div>
 
     <!-- z3 : 프레임 장식 -->
     <div class="layer layer-frame"></div>
 
-    <!-- z4 : 딤드 -->
+    <!-- z4 : 딤드 (브라우저 전체를 덮는다) -->
     <div class="layer layer-dim" id="dim"></div>
 
     <!-- z5 : UI -->
     <div class="layer layer-ui">
+
+     <!-- 가운데 16:9 틀 안에 놓이는 UI. 좌표는 지금까지와 똑같다. -->
+     <div class="frame frame-ui" id="frame-u">
 
       <!-- 통합 메뉴 : 어떤 편을 볼지 고르는 화면 -->
       <div id="menu" class="menu" aria-hidden="true">
@@ -105,7 +111,46 @@
 
       <div id="actions" class="actions"></div>
 
-      <!-- 선택 허브 -->
+     </div><!-- /.frame-ui -->
+
+      <!-- ====================================================== 앱 바
+           16:9 틀이 아니라 '브라우저 화면' 모서리에 붙는 버튼들.
+           그래서 화면이 넓어지면 좌우 끝까지 벌어진다.
+           ================================================================ -->
+      <div id="appbar" class="appbar">
+
+        <button type="button" id="btn-home" class="abtn abtn-home"
+                aria-label="메뉴로" title="메뉴로">
+          <span class="ic ic-home"></span>
+        </button>
+
+        <div class="appmenu-wrap">
+          <button type="button" id="btn-bars" class="abtn abtn-bars"
+                  aria-label="메뉴 열기" title="메뉴" aria-haspopup="true" aria-expanded="false">
+            <span class="ic ic-bars"></span>
+          </button>
+
+          <!-- 햄버거를 누르면 이 목록이 버튼 아래로 펼쳐진다.
+               ★ 문구와 주소는 여기서 바로 고치면 된다. 항목을 더 넣어도 된다.
+                  data-action="fullscreen" 인 것만 엔진이 가로채고, 나머지는 그냥 링크다. -->
+          <ul id="appmenu" class="appmenu" role="menu" data-open="0" aria-hidden="true">
+            <li role="none">
+              <button type="button" role="menuitem" class="ambtn" data-action="fullscreen">전체화면</button>
+            </li>
+            <li role="none">
+              <a role="menuitem" class="ambtn" target="_blank" rel="noopener"
+                 href="https://hanlzgi.github.io/design/">교재로 이동하기</a>
+            </li>
+            <li role="none">
+              <a role="menuitem" class="ambtn" target="_blank" rel="noopener"
+                 href="https://culture.mpva.go.kr/">보훈문화 종합포털 가기</a>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- 선택 허브 : 16:9 틀이 아니라 브라우저 왼쪽 끝에 붙는다 -->
       <div id="choice" class="choice" aria-hidden="true">
         <div id="choice-panel" class="choice-panel">
           <div class="choice-inner">

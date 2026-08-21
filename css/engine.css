@@ -24,15 +24,23 @@ html, body {
   background: #0e0b18;
 }
 
-/* 16:9 레터박스. 크기는 js/engine.js 의 fitStage() 가 계산해 넣는다. */
+/* 무대는 브라우저 화면을 가득 채운다. 배경 그라데이션도 화면 끝까지 간다. */
 #stage {
   position: absolute;
-  top: 50%; left: 50%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   margin: 0;
   overflow: hidden;
-  -webkit-transform: translate(-50%, -50%);
-      -ms-transform: translate(-50%, -50%);
-          transform: translate(-50%, -50%);
+}
+
+/* 가운데 16:9 틀 — 지금까지 '무대' 였던 그 상자다.
+   안쪽 요소는 전부 이 틀 기준 % 로 놓이므로 브라우저 크기가 바뀌어도
+   서로의 비례가 흐트러지지 않는다(영상·제목·선택하기 버튼·통합 메뉴).
+   위치와 크기는 js/engine.js 의 fitStage() 가 px 로 계산해 넣는다. */
+.frame {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
 }
 
 /* --------------------------------------------------------------- 레이어 */
@@ -391,12 +399,19 @@ html, body {
 }
 
 /* ----------------------------------------------------------- 공통 크롬 */
-/* UI 레이어 내부 순서. 선택 허브(.choice)가 전면을 덮으므로 크롬을 그 위에 올린다.
-   (z-index 없이는 DOM 순서상 .choice 가 크롬 버튼을 가려 홈/건너뛰기가 눌리지 않는다) */
+/* UI 레이어 내부 순서.
+     .frame-ui 1  ← 16:9 틀 안의 것들(제목·선택하기·통합 메뉴·하단 액션)
+     .choice   2  ← 선택 허브 팝업. 틀 안의 것들을 덮는다
+     .appbar   3  ← 홈·햄버거. 팝업이 떠 있어도 눌려야 하므로 맨 위
+   (z-index 없이는 DOM 순서상 .choice 가 크롬 버튼을 가려 눌리지 않는다) */
+.frame-ui  { z-index: 1; }
+.choice    { z-index: 2; }
+.appbar    { z-index: 3; }
+
+/* .frame-ui 안에서의 순서 */
 .chrome    { z-index: 3; }
 .actions   { z-index: 3; }
 .menu      { z-index: 2; }
-.choice    { z-index: 1; }
 
 .chrome { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
@@ -432,6 +447,90 @@ html, body {
   border-radius: 0 0 .4rem .4rem;
 }
 
+/* ============================================================== 앱 바 */
+/* 16:9 틀이 아니라 '브라우저 화면' 모서리에 붙는 버튼들.
+   크기는 rem 이라 틀 안의 버튼들과 정확히 같은 비례로 커지고 작아지는데,
+   자리만 화면 끝을 기준으로 잡으므로 넓은 화면에서는 좌우로 더 벌어진다.
+   (16:9 화면에서는 예전 무대 안 좌표와 픽셀 단위로 일치한다) */
+.appbar {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+.abtn {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0; cursor: pointer;
+  font-family: inherit;
+  pointer-events: auto;
+}
+
+/* 왼쪽 위 : 홈 */
+.abtn-home { left: 5.2rem; top: 6.2rem; width: 10.5rem; height: 10.4rem; }
+
+/* 오른쪽 위 : 햄버거 */
+.appmenu-wrap { position: absolute; right: 4.3rem; top: 5.4rem; pointer-events: none; }
+.abtn-bars    { position: relative; right: auto; top: auto; width: 6.4rem; height: 6.4rem; }
+
+/* 통합 메뉴 화면에서는 돌아갈 곳이 없으므로 홈을 감춘다 */
+.mode-menu .abtn-home { display: none; }
+
+/* ---- 햄버거 아이콘 : 가운데 줄은 요소 자신, 위아래는 의사요소 ---- */
+.ic-bars {
+  position: absolute; top: 50%; left: 50%;
+  width: 3.4rem; height: .46rem;
+  margin: -.23rem 0 0 -1.7rem;
+  background: #fff;
+  border-radius: 999px;
+}
+.ic-bars:before, .ic-bars:after {
+  content: ""; position: absolute; left: 0;
+  width: 100%; height: .46rem;
+  background: #fff;
+  border-radius: 999px;
+}
+.ic-bars:before { top: -1.15rem; }
+.ic-bars:after  { top:  1.15rem; }
+
+/* ---- 펼쳐지는 목록 : 버튼 바로 아래, 오른쪽 끝을 맞춘다 ---- */
+.appmenu {
+  position: absolute;
+  right: 0; top: 8.4rem;
+  margin: 0; padding: 1.2rem 0;
+  list-style: none;
+  min-width: 34rem;
+  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transform: translateY(-1.2rem);
+      -ms-transform: translateY(-1.2rem);
+          transform: translateY(-1.2rem);
+  -webkit-transition: opacity .18s ease, -webkit-transform .18s ease;
+          transition: opacity .18s ease, transform .18s ease;
+}
+.appmenu[data-open="1"] {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  -webkit-transform: translateY(0);
+      -ms-transform: translateY(0);
+          transform: translateY(0);
+}
+.appmenu li { display: block; margin: 0; padding: 0; }
+
+.ambtn {
+  display: block; width: 100%;
+  margin: 0;
+  padding: 1.5rem 2.6rem;
+  border: 0; background: none;
+  font-family: inherit; font-size: 2.6rem; font-weight: 700; line-height: 1.2;
+  text-align: left; text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
 /* ---------------------------------------------------------- 액션 버튼 */
 .actions {
   position: absolute;
@@ -457,9 +556,13 @@ html, body {
 }
 .choice[data-open="1"] { visibility: visible; }
 
+/* 패널은 '브라우저 왼쪽 끝' 에 붙는다. 폭은 지금까지의 규격 그대로 —
+   16:9 틀 기준 74% 를 rem 으로 환산한 값(74 × 16/9 = 131.6rem)이다.
+   그래서 화면이 넓어지면 덮이는 영역이 가운데 영상보다 왼쪽으로 치우친다. */
 .choice-panel {
   position: absolute; top: 0; left: 0; bottom: 0;
-  width: 74%;
+  width: 131.6rem;
+  max-width: 100%;
   opacity: 0;
   -webkit-transform: translateX(-50%);
       -ms-transform: translateX(-50%);
@@ -627,7 +730,9 @@ html, body {
    0.25rem = 무대 짧은 변의 0.25% — 1920×1080 에서 약 2.7px(=2pt).
    rem 이라 창을 키우고 줄여도 눌리는 정도가 같은 비율로 유지된다. */
 .btn:active,
-.vbtn:active {
+.vbtn:active,
+.abtn:active,
+.ambtn:active {
   -webkit-transform: translate(.25rem, .25rem);
       -ms-transform: translate(.25rem, .25rem);
           transform: translate(.25rem, .25rem);
@@ -647,7 +752,7 @@ html, body {
             transition: none !important;
   }
   /* 누름 표시는 위치 이동 대신 그대로 둔다 */
-  .btn:active, .vbtn:active, .menu-card:active {
+  .btn:active, .vbtn:active, .abtn:active, .ambtn:active, .menu-card:active {
     -webkit-transform: none; -ms-transform: none; transform: none;
   }
 }

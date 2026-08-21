@@ -93,27 +93,58 @@ body {
 }
 .btn-ghost:hover { background: rgba(45, 34, 82, .72); }
 
-/* 홈 : 보라색 라운드 사각형 + 흰 집 아이콘 */
-.btn-home {
+/* 홈 : 보라색 라운드 사각형 + 흰 집 아이콘
+   .abtn-home 은 브라우저 왼쪽 위에 붙는 같은 버튼이다. 생김새를 함께 쓰므로
+   여기 값 하나만 고치면 둘 다 바뀐다(둥글기 50% 는 그대로 유지). */
+.btn-home,
+.abtn-home {
   background: #6d5cb8;
   border: 0;
   border-radius: 50%;
   -webkit-box-shadow: 0 .7rem 1.8rem rgba(52, 38, 90, .34);
           box-shadow: 0 .7rem 1.8rem rgba(52, 38, 90, .34);
 }
-.btn-home:hover  { background: #7e6cca; }
-.btn-home:active { background: #5f4fa6; }
+.btn-home:hover,  .abtn-home:hover  { background: #7e6cca; }
+.btn-home:active, .abtn-home:active { background: #5f4fa6; }
 .ic-home:before  { border-bottom-color: #ffffff; }   /* 지붕 */
 .ic-home:after   { background: #ffffff; }            /* 몸통 */
 
-/* 전체화면(화면 전체 보기) : 옅은 원형 + 어두운 브래킷 */
-.btn-fullscreen {
+/* 전체화면·햄버거 : 옅은 원형 + 어두운 아이콘 */
+.btn-fullscreen,
+.abtn-bars {
   background: rgba(255, 255, 255, .5);
   border: 0;
   border-radius: 50%;
   -webkit-box-shadow: none; box-shadow: none;
 }
-.btn-fullscreen:hover { background: rgba(255, 255, 255, .82); }
+.btn-fullscreen:hover,
+.abtn-bars:hover { background: rgba(255, 255, 255, .82); }
+.abtn-bars:active { background: rgba(255, 255, 255, .95); }
+
+/* 햄버거 세 줄 */
+.ic-bars,
+.ic-bars:before,
+.ic-bars:after { background: #4a3d7c; }
+
+/* 펼쳐지는 목록 : 흰 카드 + 보라 글자 */
+.appmenu {
+  background: #ffffff;
+  border-radius: 2.2rem;
+  -webkit-box-shadow: 0 1.2rem 3.6rem rgba(28, 18, 58, .34);
+          box-shadow: 0 1.2rem 3.6rem rgba(28, 18, 58, .34);
+}
+.ambtn {
+  color: #33285c;
+  background: none;
+}
+.ambtn:hover  { background: #f4efff; }
+.ambtn:active { background: #e7dcff; }
+.ambtn:focus  { outline: .3rem solid #7d67c8; outline-offset: -.4rem; }
+.abtn:focus   { outline: .3rem solid #7d67c8; outline-offset: .3rem; }
+
+/* 마우스로 눌렀을 때 남는 테두리는 없앤다(키보드 포커스는 남긴다) */
+.abtn:focus:not(:focus-visible),
+.ambtn:focus:not(:focus-visible) { outline: none; }
 .btn-fullscreen .ic-fs:before,
 .btn-fullscreen .ic-fs:after,
 .btn-fullscreen .ic-fs i:before,

@@ -65,6 +65,11 @@
   var dom = {
     app:      $('app'),
     stage:    $('stage'),
+    frames:   [$('frame-v'), $('frame-u')],   // 가운데 16:9 틀 (영상용·UI용)
+    appbar:   $('appbar'),
+    btnHome:  $('btn-home'),
+    btnBars:  $('btn-bars'),
+    appmenu:  $('appmenu'),
     bg:       $('bg-img'),
     screen:   $('screen'),
     video:    $('video'),
@@ -128,18 +133,33 @@
   /* --------------------------------------------------- 레터박스 계산 */
   /* aspect-ratio / vh 계산에 기대지 않고 JS로 직접 맞춘다(호환 우선). */
 
+  /* 무대는 브라우저 화면을 가득 채우고, 그 안에 16:9 '틀' 을 가운데 놓는다.
+     - 화면 모서리에 붙는 것(홈·햄버거)은 무대 기준  → 화면이 넓어지면 벌어진다
+     - 가운데 것들(영상·제목·선택하기·메뉴)은 틀 기준 → 서로의 비례가 유지된다
+     1rem 은 예전과 똑같이 '틀' 의 짧은 변 1% 다. 그래서 글자·버튼 크기는 그대로다. */
   function fitStage() {
-    var w = dom.stage.parentNode.clientWidth;
-    var h = dom.stage.parentNode.clientHeight;
-    var sw, sh;
+    var w = dom.app.clientWidth;
+    var h = dom.app.clientHeight;
+    var fw, fh, fl, ft, i;
     if (!w || !h) { return; }
-    if (w / h > ratio) { sh = h; sw = Math.round(h * ratio); }
-    else               { sw = w; sh = Math.round(w / ratio); }
-    dom.stage.style.width  = sw + 'px';
-    dom.stage.style.height = sh + 'px';
-    // CSS는 rem 으로만 크기를 잡는다. 1rem = 무대 짧은 변의 1% 로 고정하면
-    // 뷰포트가 아니라 '무대'를 기준으로 모든 요소가 비례 확대된다.
-    document.documentElement.style.fontSize = (Math.min(sw, sh) / 100) + 'px';
+
+    dom.stage.style.width  = w + 'px';
+    dom.stage.style.height = h + 'px';
+
+    if (w / h > ratio) { fh = h; fw = Math.round(h * ratio); }
+    else               { fw = w; fh = Math.round(w / ratio); }
+    fl = Math.round((w - fw) / 2);
+    ft = Math.round((h - fh) / 2);
+
+    for (i = 0; i < dom.frames.length; i++) {
+      if (!dom.frames[i]) { continue; }
+      dom.frames[i].style.width  = fw + 'px';
+      dom.frames[i].style.height = fh + 'px';
+      dom.frames[i].style.left   = fl + 'px';
+      dom.frames[i].style.top    = ft + 'px';
+    }
+
+    document.documentElement.style.fontSize = (Math.min(fw, fh) / 100) + 'px';
   }
 
   /* ------------------------------------------------------ 오디오 버스 */
@@ -288,16 +308,98 @@
     var el = fsEl();
     var vLabel = (el === dom.screen) ? '전체화면 끝내기' : '전체화면';
     if (dom.vfull) { dom.vfull.setAttribute('aria-label', vLabel); dom.vfull.title = vLabel; }
-    var cLabel = (el === dom.app) ? '화면 전체 보기 끝내기' : '화면 전체 보기';
-    var cb = dom.chrome.getElementsByClassName ?
-             dom.chrome.getElementsByClassName('btn-fullscreen') : null;
-    if (cb && cb[0]) { cb[0].setAttribute('aria-label', cLabel); cb[0].title = cLabel; }
+    // 햄버거 메뉴 안의 '전체화면' 항목 글자도 상태에 맞춘다
+    var it = appMenuItem('fullscreen');
+    if (it) { setText(it, (el === dom.app) ? '전체화면 끝내기' : '전체화면'); }
   }
 
   on(document, 'fullscreenchange',       onFsChange);
   on(document, 'webkitfullscreenchange', onFsChange);
   on(document, 'mozfullscreenchange',    onFsChange);
   on(document, 'MSFullscreenChange',     onFsChange);
+
+  /* ================================================== 앱 바 / 햄버거 메뉴 */
+  /* 홈과 햄버거는 무대(16:9 틀)가 아니라 브라우저 화면 모서리에 붙는다.
+     그래서 시나리오의 chrome 목록이 아니라 index.html 에 고정으로 들어 있고,
+     펼쳐지는 목록의 문구와 주소도 index.html 에서 바로 고칠 수 있다.
+     엔진이 가로채는 것은 data-action="fullscreen" 하나뿐이고, 나머지는 그냥 링크다. */
+
+  function appMenuItems() {
+    return dom.appmenu ? dom.appmenu.getElementsByTagName('*') : [];
+  }
+
+  function appMenuItem(action) {
+    var list = appMenuItems(), i;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].getAttribute && list[i].getAttribute('data-action') === action) { return list[i]; }
+    }
+    return null;
+  }
+
+  function appMenuOpen() {
+    return !!(dom.appmenu && dom.appmenu.getAttribute('data-open') === '1');
+  }
+
+  function openAppMenu() {
+    if (!dom.appmenu) { return; }
+    dom.appmenu.setAttribute('data-open', '1');
+    dom.appmenu.setAttribute('aria-hidden', 'false');
+    if (dom.btnBars) { dom.btnBars.setAttribute('aria-expanded', 'true'); }
+  }
+
+  function closeAppMenu() {
+    if (!dom.appmenu) { return; }
+    dom.appmenu.setAttribute('data-open', '0');
+    dom.appmenu.setAttribute('aria-hidden', 'true');
+    if (dom.btnBars) { dom.btnBars.setAttribute('aria-expanded', 'false'); }
+  }
+
+  function toggleAppMenu() {
+    if (appMenuOpen()) { closeAppMenu(); } else { openAppMenu(); }
+  }
+
+  if (dom.btnBars) {
+    on(dom.btnBars, 'click', function (e) {
+      if (e && e.preventDefault) { e.preventDefault(); }
+      if (e && e.stopPropagation) { e.stopPropagation(); }
+      toggleAppMenu();
+    });
+  }
+
+  if (dom.btnHome) {
+    on(dom.btnHome, 'click', function (e) {
+      if (e && e.preventDefault) { e.preventDefault(); }
+      closeAppMenu();
+      goMenu();
+    });
+  }
+
+  if (dom.appmenu) {
+    on(dom.appmenu, 'click', function (e) {
+      var t = e.target || e.srcElement, act = null;
+      while (t && t !== dom.appmenu) {
+        if (t.getAttribute && t.getAttribute('data-action')) { act = t.getAttribute('data-action'); break; }
+        if (t.nodeName && t.nodeName.toUpperCase() === 'A') { break; }   // 링크는 그대로 통과
+        t = t.parentNode;
+      }
+      if (act === 'fullscreen') {
+        if (e.preventDefault) { e.preventDefault(); }
+        toggleFS(dom.app);
+      }
+      closeAppMenu();          // 무엇을 골랐든 목록은 접는다
+    });
+  }
+
+  /* 바깥을 누르면 접는다. 팝업(선택 허브)이나 영상 어디를 눌러도 마찬가지. */
+  on(document, 'click', function (e) {
+    if (!appMenuOpen()) { return; }
+    var t = e.target || e.srcElement;
+    while (t) {
+      if (t === dom.appmenu || t === dom.btnBars) { return; }
+      t = t.parentNode;
+    }
+    closeAppMenu();
+  });
 
   /* ==================================================== 재생 컨트롤바 */
   /* 재생/일시정지 · 다시 보기 · 배속(0.5/1/2) · 진행바 · 음량 · 전체화면.
@@ -646,11 +748,19 @@
 
   /* -------------------------------------------- 공통 크롬(홈/건너뛰기/전체화면) */
 
+  /* 홈과 전체화면은 이제 무대 밖(브라우저 모서리)의 '앱 바' 가 맡는다.
+     시나리오에 남아 있는 옛 항목은 조용히 건너뛴다 — 시나리오 파일을 고치지 않아도
+     되고, 예전 시나리오를 그대로 가져와도 버튼이 두 개로 겹치지 않는다. */
+  function isAppLevel(item) {
+    return item.action === 'menu' || item.action === 'fullscreen';
+  }
+
   function renderChrome(items) {
     empty(dom.chrome);
     items = items || [];
     var i;
     for (i = 0; i < items.length; i++) {
+      if (isAppLevel(items[i])) { continue; }
       (function (item) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -703,11 +813,10 @@
     }
   }
 
-  /* 메뉴 화면에서 쓰는 크롬 : 전체화면 버튼만 (돌아갈 곳이 없으므로 홈은 뺀다) */
-  var MENU_CHROME = [
-    { icon: 'fullscreen', title: '화면 전체 보기',
-      action: 'fullscreen', x: 94.0, y: 5.4, w: 3.6, h: 6.4 }
-  ];
+  /* 통합 메뉴 화면의 크롬은 비어 있다.
+     전체화면은 우상단 햄버거 메뉴로 옮겼고, 홈은 돌아갈 곳이 없어 감춘다
+     (감추는 것은 CSS 의 .mode-menu .abtn-home 규칙이 한다). */
+  var MENU_CHROME = [];
 
   /* ========================================================== 통합 메뉴 */
 
@@ -1150,6 +1259,7 @@
                      t === dom.vbar || t === dom.vvolbar);
 
     if (k === 27) {                                   // ESC
+      if (appMenuOpen()) { closeAppMenu(); return; }  // 펼친 햄버거 메뉴부터 접는다
       // 전체화면 중이면 해제가 우선. 브라우저가 알아서 빠져나오는 경우가 많지만
       // 그렇지 않은 환경(키오스크 셸 등)에서 갇히지 않도록 직접 호출한다.
       if (fsEl()) { leaveFS(); return; }
